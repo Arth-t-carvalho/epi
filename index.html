@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Login - EPI Guard</title>
+    <link rel="stylesheet" href="style.css">
+
+    <style>
+        .login-container {
+            transition: transform 0.4s ease, opacity 0.6s ease;
+        }
+
+        .login-container.slide-up {
+            transform: translateY(-100vh);
+            opacity: 0;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="login-container">
+        <div class="login-box">
+            <h1>EPI Guard</h1>
+            <p>Monitoramento de Segurança</p>
+
+            <form>
+                <div class="input-group">
+                    <label>Usuário</label>
+                    <input type="text" placeholder="Digite seu usuário">
+                </div>
+
+                <div class="input-group">
+                    <label>Senha</label>
+                    <input type="password" placeholder="Digite sua senha">
+                </div>
+
+                <button type="button" onclick="entrar()">Entrar</button>
+                <!-- nao esquecer de mudar o type do button quando mudar php -->
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function entrar() {
+            document.querySelector(".login-container").classList.add("slide-up");
+
+            setTimeout(() => {
+                window.location.href = "teste.html";
+            }, 600);
+        }
+        // --- SCRIPT DE NAVEGAÇÃO HARMÔNICA ---
+        document.addEventListener("DOMContentLoaded", () => {
+            // Pega todos os links do menu lateral e botões de navegação
+            const links = document.querySelectorAll('a.nav-item, a.btn-link, a');
+
+            links.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    const href = link.getAttribute('href');
+
+                    // Verificações de segurança para não animar links falsos
+                    if (!href || href === '#' || href.startsWith('javascript:')) return;
+
+                    // Se for link externo (target="_blank"), deixa abrir normal
+                    if (link.target === '_blank') return;
+
+                    e.preventDefault(); // Pausa a mudança de página
+
+                    // Adiciona a classe que faz o Dashboard deslizar para a esquerda
+                    document.body.classList.add('page-exit');
+
+                    // Aguarda 400ms (tempo da animação) e muda de página
+                    setTimeout(() => {
+                        window.location.href = href;
+                    }, 400);
+                });
+            });
+        });
+    </script>
+</body>
+
+</html>

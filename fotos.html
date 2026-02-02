@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EPI Guard | Galeria de Infrações</title>
+
+    <style>
+        /* --- 1. REAPROVEITANDO DESIGN SYSTEM (Obrigatório para consistência) --- */
+        :root {
+            --senai-red: #E30613;
+            --senai-red-hover: #b90510;
+            --senai-red-light: rgba(227, 6, 19, 0.08);
+            --bg-body: #F4F6F8;
+            --bg-card: #FFFFFF;
+            --text-primary: #1F2937;
+            --text-secondary: #64748B;
+            --border-color: #E2E8F0;
+            --radius: 12px;
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --font-stack: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; outline: none; }
+
+        body {
+            font-family: var(--font-stack);
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            display: flex;
+            height: 100vh;
+            overflow: hidden; /* Importante para o scroll ser interno */
+        }
+
+        /* --- 2. ANIMAÇÕES DE NAVEGAÇÃO --- */
+        
+        /* Entrada: Vem da Direita (Fluxo natural de navegação) */
+        body {
+            opacity: 0;
+            animation: slideInFromRight 0.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+        }
+
+        @keyframes slideInFromRight {
+            0% { opacity: 0; transform: translateX(60px); }
+            100% { opacity: 1; transform: translateX(0); }
+        }
+
+        /* Saída: Vai para a Esquerda (Igual ao Dashboard) */
+        body.page-exit {
+            animation: slideOutToLeft 0.4s ease-in forwards;
+            pointer-events: none;
+        }
+
+        @keyframes slideOutToLeft {
+            0% { opacity: 1; transform: translateX(0); }
+            100% { opacity: 0; transform: translateX(-60px); }
+        }
+
+        /* --- 3. SIDEBAR (Igual ao Dashboard) --- */
+        .sidebar {
+            width: 260px;
+            background: var(--bg-card);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            z-index: 20;
+        }
+        .brand { height: 80px; display: flex; align-items: center; padding: 0 24px; border-bottom: 1px solid var(--border-color); }
+        .brand-logo { font-size: 20px; font-weight: 800; color: var(--text-primary); display: flex; align-items: center; gap: 10px; }
+        .brand-bar { width: 6px; height: 24px; background-color: var(--senai-red); border-radius: 4px; }
+        .nav-menu { padding: 24px 16px; flex: 1; }
+        .nav-item { display: flex; align-items: center; padding: 12px 16px; margin-bottom: 8px; text-decoration: none; color: var(--text-secondary); font-weight: 500; border-radius: 8px; transition: var(--transition); cursor: pointer; }
+        .nav-item:hover, .nav-item.active { background-color: var(--senai-red-light); color: var(--senai-red); }
+        .nav-item.active { font-weight: 700; border-right: 3px solid var(--senai-red); }
+        .nav-icon { margin-right: 12px; width: 20px; text-align: center; }
+
+        /* --- 4. ÁREA PRINCIPAL --- */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .header {
+            height: 80px;
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 32px;
+            flex-shrink: 0;
+        }
+
+        .page-title h1 { font-size: 24px; font-weight: 700; }
+        .page-title p { font-size: 14px; color: var(--text-secondary); margin-top: 4px; }
+
+        /* --- 5. GRID DE OCORRÊNCIAS (Novo) --- */
+        .gallery-container {
+            flex: 1;
+            padding: 32px;
+            overflow-y: auto;
+        }
+
+        .filter-bar {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+
+        .filter-select {
+            padding: 10px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: white;
+            color: var(--text-secondary);
+            font-family: var(--font-stack);
+            cursor: pointer;
+        }
+
+        .grid-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 24px;
+            padding-bottom: 40px;
+        }
+
+        /* O CARD DE INFRAÇÃO */
+        .violation-card {
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            overflow: hidden;
+            box-shadow: var(--shadow-sm);
+            transition: var(--transition);
+            border: 1px solid transparent;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .violation-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            border-color: var(--senai-red);
+        }
+
+        /* Área da Foto */
+        .card-image-wrapper {
+            height: 180px;
+            width: 100%;
+            background-color: #cbd5e1; /* Cor de fundo caso a imagem falhe */
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s ease;
+        }
+
+        .violation-card:hover .card-image {
+            transform: scale(1.05); /* Zoom suave na imagem ao passar o mouse */
+        }
+
+        /* Overlay de "Clique para ampliar" */
+        .card-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: 0.3s;
+        }
+
+        .violation-card:hover .card-overlay { opacity: 1; }
+        .zoom-icon { color: white; font-size: 24px; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 50%; }
+
+        /* Dados do Card */
+        .card-content { padding: 16px; }
+
+        .card-header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+
+        .violation-tag {
+            background: #FEF2F2;
+            color: var(--senai-red);
+            font-size: 11px;
+            font-weight: 700;
+            padding: 4px 8px;
+            border-radius: 4px;
+            text-transform: uppercase;
+            border: 1px solid rgba(227, 6, 19, 0.2);
+        }
+
+        .camera-id {
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        .infrator-name {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+            display: block;
+        }
+
+        .timestamp {
+            font-size: 13px;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* --- 6. MODAL (EXPANSÃO DA FOTO) --- */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease;
+            padding: 40px;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            background: transparent;
+            max-width: 900px;
+            width: 100%;
+            position: relative;
+            transform: scale(0.9);
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .modal-overlay.active .modal-content {
+            transform: scale(1);
+        }
+
+        .full-image {
+            width: 100%;
+            height: auto;
+            border-radius: 8px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            border: 2px solid white;
+        }
+
+        .modal-info-bar {
+            background: white;
+            padding: 16px 24px;
+            border-radius: 0 0 8px 8px; /* Arredonda só embaixo */
+            margin-top: -4px; /* Cola na imagem */
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .close-modal-btn {
+            position: absolute;
+            top: -40px;
+            right: 0;
+            color: white;
+            font-size: 30px;
+            background: none;
+            border: none;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="brand-logo">
+                <div class="brand-bar"></div>
+                EPI GUARD
+            </div>
+        </div>
+        <nav class="nav-menu">
+            <a href="novo.html" class="nav-item">
+                <span class="nav-icon">📊</span> Dashboard
+            </a>
+            <a class="nav-item active" href="fotos.html">
+                <span class="nav-icon">⚠️</span> Ocorrências
+            </a>
+            <a href="novo.html" class="nav-item">
+                <span class="nav-icon">👥</span> Controle de Sala
+            </a>
+            <a class="nav-item">
+                <span class="nav-icon">📑</span> Relatórios
+            </a>
+            <a class="nav-item">
+                <span class="nav-icon">⚙️</span> Configurações
+            </a>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+        <header class="header">
+            <div class="page-title">
+                <h1>Registro de Ocorrências</h1>
+                <p>Capturas automáticas do sistema de visão computacional</p>
+            </div>
+            <div class="user-profile-trigger">
+                <div style="width: 40px; height: 40px; background: #E30613; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold;">CO</div>
+            </div>
+        </header>
+
+        <div class="gallery-container">
+            
+            <div class="filter-bar">
+                <select class="filter-select">
+                    <option>Hoje</option>
+                    <option>Ontem</option>
+                    <option>Últimos 7 dias</option>
+                </select>
+                <select class="filter-select">
+                    <option>Todos os Setores</option>
+                    <option>Usinagem</option>
+                    <option>Solda</option>
+                </select>
+                <select class="filter-select">
+                    <option>Todas as Infrações</option>
+                    <option>Sem Óculos</option>
+                    <option>Sem Capacete</option>
+                </select>
+            </div>
+
+            <div class="grid-cards" id="cardsContainer">
+                </div>
+        </div>
+    </main>
+
+    <div class="modal-overlay" id="imageModal" onclick="closeModal(event)">
+        <div class="modal-content">
+            <button class="close-modal-btn" onclick="forceClose()">✕</button>
+            <img src="" id="modalImg" class="full-image">
+            <div class="modal-info-bar">
+                <div>
+                    <h3 id="modalName" style="color: #1F2937; margin-bottom: 4px;">Nome do Infrator</h3>
+                    <p id="modalDesc" style="color: #E30613; font-weight: 600;">Infração: ...</p>
+                </div>
+                <div style="text-align: right;">
+                    <p id="modalTime" style="color: #64748B; font-size: 14px;">Horário</p>
+                    <p id="modalCam" style="color: #64748B; font-size: 12px;">Camera ID</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. DADOS SIMULADOS (MOCKUP) ---
+        // Imagine que isso vem do seu Banco de Dados ou da Câmera
+        const ocorrencias = [
+            { id: 1, nome: "João Silva", infra: "Sem Óculos de Proteção", setor: "Torno CNC", time: "10:42", cam: "CAM-01", img: "https://images.unsplash.com/photo-1581092921461-eab62e97a782?q=80&w=400&auto=format&fit=crop" },
+            { id: 2, nome: "Marcos Souza", infra: "Sem Capacete", setor: "Obras", time: "11:15", cam: "CAM-04", img: "https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?q=80&w=400&auto=format&fit=crop" },
+            { id: 3, nome: "Ana Pereira", infra: "Luva Inadequada", setor: "Solda", time: "13:30", cam: "CAM-02", img: "https://images.unsplash.com/photo-1616428753232-475470d172e2?q=80&w=400&auto=format&fit=crop" },
+            { id: 4, nome: "Roberto Carlos", infra: "Sem Protetor Auricular", setor: "Prensas", time: "14:10", cam: "CAM-03", img: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?q=80&w=400&auto=format&fit=crop" },
+            { id: 5, nome: "Desconhecido #92", infra: "Área Restrita", setor: "Almoxarifado", time: "15:45", cam: "CAM-01", img: "https://images.unsplash.com/photo-1535955575914-72274d4c5edb?q=80&w=400&auto=format&fit=crop" },
+             { id: 6, nome: "Luiz Fernando", infra: "Sem Óculos de Proteção", setor: "Torno CNC", time: "16:22", cam: "CAM-01", img: "https://images.unsplash.com/photo-1581092921461-eab62e97a782?q=80&w=400&auto=format&fit=crop" },
+        ];
+
+        // --- 2. RENDERIZAÇÃO DOS CARDS ---
+        const container = document.getElementById('cardsContainer');
+
+        ocorrencias.forEach(item => {
+            const card = document.createElement('div');
+            card.className = 'violation-card';
+            // Ao clicar no card, abre o modal passando os dados desse item
+            card.onclick = () => openModal(item);
+
+            card.innerHTML = `
+                <div class="card-image-wrapper">
+                    <img src="${item.img}" class="card-image" alt="Foto da infração">
+                    <div class="card-overlay">
+                        <span class="zoom-icon">🔍</span>
+                    </div>
+                </div>
+                <div class="card-content">
+                    <div class="card-header-row">
+                        <span class="violation-tag">${item.infra}</span>
+                        <span class="camera-id">${item.cam}</span>
+                    </div>
+                    <span class="infrator-name">${item.nome}</span>
+                    <div class="timestamp">
+                        <span>🕒</span> ${item.time} • ${item.setor}
+                    </div>
+                </div>
+            `;
+            container.appendChild(card);
+        });
+
+        // --- 3. LÓGICA DO MODAL ---
+        const modal = document.getElementById('imageModal');
+        const modalImg = document.getElementById('modalImg');
+        const modalName = document.getElementById('modalName');
+        const modalDesc = document.getElementById('modalDesc');
+        const modalTime = document.getElementById('modalTime');
+        const modalCam = document.getElementById('modalCam');
+
+        function openModal(data) {
+            // Preenche os dados
+            modalImg.src = data.img; // Na vida real, poderia ser uma URL de alta resolução
+            modalName.innerText = data.nome;
+            modalDesc.innerText = `Infração: ${data.infra}`;
+            modalTime.innerText = `Horário: ${data.time}`;
+            modalCam.innerText = `Câmera: ${data.cam}`;
+
+            // Abre o modal
+            modal.classList.add('active');
+        }
+
+        function closeModal(e) {
+            // Fecha apenas se clicar no fundo escuro (overlay), não na imagem
+            if (e.target === modal) {
+                modal.classList.remove('active');
+            }
+        }
+        
+        function forceClose() {
+             modal.classList.remove('active');
+        }
+
+        // --- 4. SCRIPT DE TRANSIÇÃO (Igual ao que fizemos antes) ---
+        document.addEventListener("DOMContentLoaded", () => {
+            const links = document.querySelectorAll('a.nav-item');
+
+            links.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    const href = link.getAttribute('href');
+                    if (!href || href === '#' || href.startsWith('javascript:')) return;
+                    
+                    e.preventDefault();
+                    document.body.classList.add('page-exit');
+
+                    setTimeout(() => {
+                        window.location.href = href;
+                    }, 400); 
+                });
+            });
+        });
+    </script>
+
+</body>
+</html>

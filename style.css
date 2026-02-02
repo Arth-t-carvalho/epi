@@ -111,3 +111,26 @@ a {
     text-decoration: none;
 
 }
+
+/* --- MANTENHA O SEU 'body' COMO ESTÁ --- */
+
+/* Adicione apenas isto para a SAÍDA (Slide para a Esquerda) */
+body.page-exit {
+    /* Sobrescreve a animação de entrada e inicia a de saída */
+    animation: pageSlideOut 0.4s cubic-bezier(0.5, 0, 0.1, 1) forwards;
+    pointer-events: none;
+    /* Bloqueia cliques durante a saída */
+}
+
+@keyframes pageSlideOut {
+    0% {
+        opacity: 1;
+        transform: translateX(0);
+    }
+
+    100% {
+        opacity: 0;
+        transform: translateX(-80px);
+        /* Desliza para a esquerda */
+    }
+}
