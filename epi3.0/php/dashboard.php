@@ -1,79 +1,39 @@
 <?php
-require_once '../config/auth.php';
-require_once '../config/database.php';
+// ARQUIVO: php/dashboard.php
 
-/* =========================
-   CONFIGURAÇÃO DO PROFESSOR
-========================= */
-$cursoId = 1; // curso que o professor pode visualizar
+// Ajuste os requires conforme a localização da sua pasta config
+require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../config/auth.php';
 
-/* =========================
-   1. DADOS DO USUÁRIO
-========================= */
-$stmtUser = $pdo->prepare("
-    SELECT nome, cargo 
-    FROM usuarios 
-    WHERE usuario = ?
-");
+// CONFIGURAÇÃO DO PROFESSOR
+$cursoId = 1; 
+
+// DADOS DO USUÁRIO
+$stmtUser = $pdo->prepare("SELECT nome, cargo FROM usuarios WHERE usuario = ?");
 $stmtUser->execute([$_SESSION['usuario_nome'] ?? 'admin']);
 $userData = $stmtUser->fetch(PDO::FETCH_ASSOC);
 
 $nomeUsuario  = $userData['nome']  ?? 'Usuário';
 $cargoUsuario = ucfirst($userData['cargo'] ?? 'Visitante');
 
-/* =========================
-   2. KPIs (FILTRADOS POR CURSO)
-========================= */
-
-// Infrações do dia
-$stmtDia = $pdo->prepare("
-    SELECT COUNT(o.id)
-    FROM ocorrencias o
-    JOIN alunos a ON a.id = o.aluno_id
-    WHERE a.curso_id = ?
-      AND o.data_hora >= CURDATE()
-      AND o.data_hora < CURDATE() + INTERVAL 1 DAY
-");
+// KPIs
+$stmtDia = $pdo->prepare("SELECT COUNT(o.id) FROM ocorrencias o JOIN alunos a ON a.id = o.aluno_id WHERE a.curso_id = ? AND o.data_hora >= CURDATE() AND o.data_hora < CURDATE() + INTERVAL 1 DAY");
 $stmtDia->execute([$cursoId]);
 $infraDia = $stmtDia->fetchColumn();
 
-// Infrações da semana
-$stmtSemana = $pdo->prepare("
-    SELECT COUNT(o.id)
-    FROM ocorrencias o
-    JOIN alunos a ON a.id = o.aluno_id
-    WHERE a.curso_id = ?
-      AND YEARWEEK(o.data_hora, 1) = YEARWEEK(CURDATE(), 1)
-");
+$stmtSemana = $pdo->prepare("SELECT COUNT(o.id) FROM ocorrencias o JOIN alunos a ON a.id = o.aluno_id WHERE a.curso_id = ? AND YEARWEEK(o.data_hora, 1) = YEARWEEK(CURDATE(), 1)");
 $stmtSemana->execute([$cursoId]);
 $infraSemana = $stmtSemana->fetchColumn();
 
-// Infrações do mês
-$stmtMes = $pdo->prepare("
-    SELECT COUNT(o.id)
-    FROM ocorrencias o
-    JOIN alunos a ON a.id = o.aluno_id
-    WHERE a.curso_id = ?
-      AND MONTH(o.data_hora) = MONTH(CURDATE())
-      AND YEAR(o.data_hora) = YEAR(CURDATE())
-");
+$stmtMes = $pdo->prepare("SELECT COUNT(o.id) FROM ocorrencias o JOIN alunos a ON a.id = o.aluno_id WHERE a.curso_id = ? AND MONTH(o.data_hora) = MONTH(CURDATE()) AND YEAR(o.data_hora) = YEAR(CURDATE())");
 $stmtMes->execute([$cursoId]);
 $infraMes = $stmtMes->fetchColumn();
 
-/* =========================
-   3. MÉDIA DA TURMA (REAL)
-========================= */
-
-// Total de alunos do curso
-$stmtAlunosTotal = $pdo->prepare("
-    SELECT COUNT(*) 
-    FROM alunos 
-    WHERE curso_id = ?
-");
+// MÉDIA TURMA
+$stmtAlunosTotal = $pdo->prepare("SELECT COUNT(*) FROM alunos WHERE curso_id = ?");
 $stmtAlunosTotal->execute([$cursoId]);
 $totalAlunos = (int) $stmtAlunosTotal->fetchColumn();
 
-// Evita divisão por zero
 if ($totalAlunos === 0) {
     $mediaTurma = 100;
 } else {
@@ -81,18 +41,8 @@ if ($totalAlunos === 0) {
     $mediaTurma = max(0, min(100, round($mediaTurma)));
 }
 
-/* =========================
-   4. ALUNOS COM MAIS INFRAÇÕES
-========================= */
-$stmtAlunosCriticos = $pdo->prepare("
-    SELECT a.nome, COUNT(o.id) AS total
-    FROM alunos a
-    JOIN ocorrencias o ON a.id = o.aluno_id
-    WHERE a.curso_id = ?
-    GROUP BY a.id
-    ORDER BY total DESC
-    LIMIT 4
-");
+// ALUNOS CRÍTICOS
+$stmtAlunosCriticos = $pdo->prepare("SELECT a.nome, COUNT(o.id) AS total FROM alunos a JOIN ocorrencias o ON a.id = o.aluno_id WHERE a.curso_id = ? GROUP BY a.id ORDER BY total DESC LIMIT 4");
 $stmtAlunosCriticos->execute([$cursoId]);
 $alunosCriticos = $stmtAlunosCriticos->fetchAll(PDO::FETCH_ASSOC);
 ?>
@@ -121,7 +71,7 @@ $alunosCriticos = $stmtAlunosCriticos->fetchAll(PDO::FETCH_ASSOC);
         </div>
         <nav class="nav-menu">
             <a class="nav-item active" href="dashboard.php"> Dashboard</a>
-            <a class="nav-item" href="infraçoes.php"> Infrações</a>
+            <a class="nav-item" href="infracoes.php"> Infrações</a>
             <a class="nav-item" href="controleSala.php"> Controle de Sala</a>
             <a class="nav-item" href="ocorrencias.php">Ocorrencias</a>
         </nav>
@@ -155,15 +105,10 @@ $alunosCriticos = $stmtAlunosCriticos->fetchAll(PDO::FETCH_ASSOC);
             <div class="instructor-card" id="instructorCard">
                 <div style="margin-bottom: 20px;">
                     <h3><?php echo htmlspecialchars($nomeUsuario); ?></h3>
-                    <p style="color: #64748B; font-size: 13px;"></p>
                 </div>
                 <div class="detail-row">
                     <span class="detail-label">Cargo</span>
                     <span class="detail-value"><?php echo htmlspecialchars($cargoUsuario); ?></span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Turno</span>
-                    <span class="detail-value">Manhã/Tarde</span>
                 </div>
                 <div class="detail-row">
                     <span class="detail-label">Status</span>
@@ -173,30 +118,39 @@ $alunosCriticos = $stmtAlunosCriticos->fetchAll(PDO::FETCH_ASSOC);
             </div>
         </header>
 
-        <div class="kpi-grid">
-            <div class="card">
-                <div class="kpi-header">Infrações no dia</div>
-                <div class="kpi-value"><?php echo $infraDia; ?> <span class="badge up">↗ HOJE</span></div>
-            </div>
-            <div class="card">
-                <div class="kpi-header">Infrações Semanais</div>
-                <div class="kpi-value"><?php echo $infraSemana; ?><span class="badge down">↘ SEMANA</span></div>
-            </div>
-            <div class="card">
-                <div class="kpi-header">Infrações Mês</div>
-                <div class="kpi-value"><?php echo $infraMes; ?><span class="badge up">↗ MÊS</span></div>
-            </div>
-            <div class="card">
-                <div class="kpi-header">Média Turma</div>
-                <div class="kpi-value"><?php echo $mediaTurma; ?>% <span class="badge up">↗ 1.2%</span></div>
-            </div>
+       <div class="kpi-grid">
+    <div class="card">
+        <div class="kpi-header">Infrações no dia</div>
+        <div class="kpi-value">
+            <span id="kpiDia"><?php echo $infraDia; ?></span> 
+            <span class="badge up">↗ DATA</span>
         </div>
-
+    </div>
+    <div class="card">
+        <div class="kpi-header">Infrações Semanais</div>
+        <div class="kpi-value">
+            <span id="kpiSemana"><?php echo $infraSemana; ?></span>
+            <span class="badge down">↘ SEMANA</span>
+        </div>
+    </div>
+    <div class="card">
+        <div class="kpi-header">Infrações Mês</div>
+        <div class="kpi-value">
+            <span id="kpiMes"><?php echo $infraMes; ?></span>
+            <span class="badge up">↗ MÊS</span>
+        </div>
+    </div>
+    <div class="card">
+        <div class="kpi-header">Média Turma</div>
+        <div class="kpi-value">
+            <span id="kpiMedia"><?php echo $mediaTurma; ?>%</span> 
+            <span class="badge up">↗ 1.2%</span>
+        </div>
+    </div>
+</div>
         <div class="card" style="height: 380px; display: flex; flex-direction: column;">
             <div class="section-header">
                 <span class="section-title">Consumo de EPIs (Anual)</span>
-                <div style="display:flex; gap:15px; font-size:13px; color: #64748B;">
-                </div>
             </div>
             <div style="flex: 1; position: relative;">
                 <canvas id="mainChart"></canvas>
@@ -213,7 +167,7 @@ $alunosCriticos = $stmtAlunosCriticos->fetchAll(PDO::FETCH_ASSOC);
                     <button class="nav-btn" onclick="changeDay(-1)">❮</button>
                     <div class="date-display">
                         <div class="date-day" id="displayDay">02</div>
-                        <div class="date-month">Setembro 2024</div>
+                        <div class="date-month">Dia Atual</div>
                     </div>
                     <button class="nav-btn" onclick="changeDay(1)">❯</button>
                 </div>
@@ -237,10 +191,8 @@ $alunosCriticos = $stmtAlunosCriticos->fetchAll(PDO::FETCH_ASSOC);
                 <div style="display: flex; flex-direction: column; gap: 4px;">
                     
                     <?php 
-                    // Loop PHP para gerar a lista baseada no banco de dados real
                     if (count($alunosCriticos) > 0): 
                         foreach($alunosCriticos as $aluno): 
-                            // Lógica simples para cor da barra
                             $width = ($aluno['total'] > 20) ? 100 : ($aluno['total'] * 5); 
                             $color = ($aluno['total'] > 10) ? '#E30613' : '#1F2937'; 
                     ?>
@@ -271,8 +223,7 @@ $alunosCriticos = $stmtAlunosCriticos->fetchAll(PDO::FETCH_ASSOC);
             <div class="modal-header">
                 <div class="modal-title">
                     <h2>Relatório de Infrações: <span id="modalMonthTitle">Mês</span></h2>
-                    <p style="font-size: 0.85rem; color: #64748B; margin-top: 4px;">Detalhamento completo dos registros
-                        neste período.</p>
+                    <p style="font-size: 0.85rem; color: #64748B; margin-top: 4px;">Detalhamento completo dos registros.</p>
                 </div>
                 <button class="btn-close-modal" onclick="closeModal()">&times;</button>
             </div>

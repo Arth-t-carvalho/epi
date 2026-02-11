@@ -1,23 +1,11 @@
 <?php
-// ==========================================
-// 1. CONFIGURAÇÕES E AUTH
-// ==========================================
-// Ajuste o caminho conforme sua estrutura de pastas
-if (file_exists('../config/auth.php')) {
-    require_once '../config/auth.php';
-} elseif (file_exists('../config/auth.php')) {
-    require_once '../config/auth.php';
-} else {
-    die("Erro: Arquivo auth.php não encontrado.");
-}
+require_once __DIR__ . '/../config/database.php';
+// Se usar sistema de login, mantenha a linha abaixo
+// require_once __DIR__ . '/../config/auth.php';
 
-// Se o database não estiver dentro do auth, incluímos aqui
-if (file_exists('../php/database.php')) {
-    require_once '../config/database.php';
-}
-
-// Dados do Usuário para o Cabeçalho (Header)
-$nomeUsuario = $_SESSION['usuario_nome'] ?? 'Instrutor'; // Pega da sessão ou usa padrão
+// Simulação de sessão para teste (remova se já tiver login real)
+if (session_status() === PHP_SESSION_NONE) session_start();
+$nomeUsuario = $_SESSION['usuario_nome'] ?? 'Instrutor';
 $cargoUsuario = $_SESSION['usuario_cargo'] ?? 'Supervisor';
 $iniciais = strtoupper(substr($nomeUsuario, 0, 2));
 ?>
@@ -29,25 +17,45 @@ $iniciais = strtoupper(substr($nomeUsuario, 0, 2));
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EPI Guard | Controle de Sala</title>
-
     <link rel="stylesheet" href="../css/controleSala.css">
+    
+    <style>
+        /* CSS Rápido para garantir funcionamento básico do modal e layout */
+        .modal-overlay {
+            display: none; /* Oculto por padrão */
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); z-index: 1000;
+            justify-content: center; align-items: center;
+        }
+        .modal-content {
+            background: white; width: 90%; max-width: 500px;
+            border-radius: 12px; overflow: hidden;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+        .modal-header {
+            padding: 15px 20px; border-bottom: 1px solid #eee;
+            display: flex; justify-content: space-between; align-items: center;
+            background: #f9fafb;
+        }
+        .close-btn { background: none; border: none; font-size: 24px; cursor: pointer; color: #666; }
+        .instructor-card { display: none; position: absolute; right: 20px; top: 70px; background: white; border: 1px solid #ddd; padding: 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); z-index: 100; }
+    </style>
 </head>
 
 <body>
 
     <aside class="sidebar">
         <div class="brand">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#E30613" stroke-width="3"
-                style="filter: drop-shadow(0 2px 4px rgba(227, 6, 19, 0.3));">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#E30613" stroke-width="3">
                 <circle cx="12" cy="12" r="10" />
             </svg>
             &nbsp; EPI <span>GUARD</span>
         </div>
         <nav class="nav-menu">
-            <a class="nav-item" href="dashboard.php"> Dashboard</a>
-            <a class="nav-item" href="infracoes.php"> Infrações</a>
-            <a class="nav-item active" href="controleSala.php"> Controle de Sala</a>
-            <a class="nav-item" href="ocorrencias.php">Ocorrencias</a>
+            <a class="nav-item" href="dashboard.php">Dashboard</a>
+            <a class="nav-item" href="infracoes.php">Infrações</a>
+            <a class="nav-item active" href="controleSala.php">Controle de Sala</a>
+            <a class="nav-item" href="ocorrencias.php">Ocorrências</a>
         </nav>
     </aside>
 
@@ -75,10 +83,11 @@ $iniciais = strtoupper(substr($nomeUsuario, 0, 2));
                     <p style="color: #64748B; font-size: 13px;">ID: <?php echo $_SESSION['usuario_id'] ?? '0000'; ?></p>
                 </div>
                 <div class="detail-row">
-                    <span class="detail-label">Status</span>
-                    <span class="detail-value" style="color:var(--success)">Online</span>
+                    <span class="detail-label">Status:</span>
+                    <span class="detail-value" style="color:green; font-weight:bold;">Online</span>
                 </div>
-                <button class="btn-close-card" onclick="location.href='../php/logout.php'">Sair</button>
+                <hr style="margin: 15px 0; border:0; border-top:1px solid #eee;">
+                <button class="btn-close-card" style="width:100%; padding:8px;" onclick="location.href='../php/logout.php'">Sair</button>
             </div>
         </header>
 
@@ -111,40 +120,24 @@ $iniciais = strtoupper(substr($nomeUsuario, 0, 2));
     <div class="modal-overlay" id="detailModal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2 id="modalName">Nome do Aluno</h2>
+                <div>
+                    <h2 id="modalName" style="margin:0; font-size:18px;">Nome do Aluno</h2>
+                    <small id="modalCourse" style="color:#666;">Curso...</small>
+                </div>
                 <button class="close-btn" onclick="closeModal()">✕</button>
             </div>
 
             <div style="padding: 20px;">
-                <p style="margin-bottom: 10px; font-weight: bold; color: #4b5563;">EPIs Pendentes:</p>
-                <div id="modalEpiList" class="epi-list"></div>
+                <h4 style="margin-bottom: 10px; color: #333;">Checklist de EPIs:</h4>
+                <div id="modalEpiList" class="epi-list">
+                    </div>
             </div>
 
-            <div id="modalFooterActions" class="modal-actions"
-                style="padding: 20px; border-top: 1px solid #eee; text-align: right;">
-                <button class="btn-cancel" onclick="closeModal()">Fechar</button>
-            </div>
-        </div>
-    </div>
-
-  <div id="detailModal" class="modal-overlay" style="display: none;">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2 id="modalName">Nome do Aluno</h2>
-            <button onclick="closeModal()" class="close-btn">&times;</button>
-        </div>
-        <div class="modal-body">
-            <p id="modalCourse" style="color:#666; margin-bottom:15px;">Curso...</p>
-            
-            <h4>Status dos EPIs:</h4>
-            <div id="modalEpiList" class="epi-list">
+            <div id="modalFooterActions" style="padding: 20px; border-top: 1px solid #eee;">
                 </div>
         </div>
-        <div id="modalFooterActions" class="modal-footer">
-            </div>
     </div>
-</div>
+
     <script src="../js/controleSala.js"></script>
 </body>
-
 </html>

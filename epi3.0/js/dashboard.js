@@ -33,19 +33,59 @@ function exportData() {
 // ===============================
 // LÓGICA 2: CALENDÁRIO (BACKEND)
 // ===============================
-let currentDay = new Date().getDate();
-let calendarData = {};
+// ===============================
+// LÓGICA 2: CALENDÁRIO & KPIS DINÂMICOS
+// ===============================
 
-function renderCalendar() {
-    document.getElementById('displayDay').innerText = String(currentDay).padStart(2, '0');
+// Estado Global
+let selectedDate = new Date(); // Começa com Hoje
+let allOccurrences = []; // Armazena todos os dados vindos do banco
+
+// Função para comparar se duas datas são o mesmo dia
+function isSameDay(d1, d2) {
+    return d1.getFullYear() === d2.getFullYear() &&
+           d1.getMonth() === d2.getMonth() &&
+           d1.getDate() === d2.getDate();
+}
+
+// Função para verificar se está na mesma semana (começando domingo)
+function isSameWeek(d1, d2) {
+    const onejan = new Date(d1.getFullYear(), 0, 1);
+    const today = new Date(d1.getFullYear(), d1.getMonth(), d1.getDate());
+    const dayOfYear = ((today - onejan + 86400000) / 86400000);
+    const week1 = Math.ceil(dayOfYear / 7);
+    
+    const target = new Date(d2.getFullYear(), d2.getMonth(), d2.getDate());
+    const dayOfYearTarget = ((target - onejan + 86400000) / 86400000);
+    const week2 = Math.ceil(dayOfYearTarget / 7);
+
+    return d1.getFullYear() === d2.getFullYear() && week1 === week2;
+}
+
+function renderInterface() {
+    // 1. Atualiza Texto da Data no Navegador
+    const day = String(selectedDate.getDate()).padStart(2, '0');
+    // Obs: O replace remove o ponto que alguns browsers colocam (ex: jan.)
+    const month = selectedDate.toLocaleString('pt-BR', { month: 'short' }).replace('.', '');
+    document.getElementById('displayDay').innerHTML = `${day} <span style="font-size:0.6em; text-transform:uppercase">${month}</span>`;
+
+    // 2. Filtra Ocorrências para a LISTA LATERAL
     const list = document.getElementById('occurrenceList');
     list.innerHTML = '';
 
-    const data = calendarData[currentDay];
+    const dailyData = allOccurrences.filter(item => {
+        // O PHP agora retorna 'full_date' ou 'data_hora'. 
+        // Vamos garantir que pegamos o campo certo.
+        const dbDateString = item.full_date || item.data_hora || item.date;
+        // Safari/Firefox as vezes tem problemas com datas SQL padrão, o replace ajuda
+        const itemDate = new Date(dbDateString.replace(/-/g, '/')); 
+        
+        return isSameDay(selectedDate, itemDate);
+    });
 
-    if (data && data.length > 0) {
-        data.forEach(item => {
-            const initials = item.name.split(' ').map(n => n[0]).join('').substring(0, 2);
+    if (dailyData.length > 0) {
+        dailyData.forEach(item => {
+            const initials = item.name ? item.name.substring(0, 2).toUpperCase() : '??';
             list.innerHTML += `
                 <div class="occurrence-item">
                     <div class="occ-avatar">${initials}</div>
@@ -58,25 +98,90 @@ function renderCalendar() {
             `;
         });
     } else {
-        list.innerHTML = `<div class="empty-state">✅ Nenhuma infração.</div>`;
+        list.innerHTML = `<div class="empty-state" style="padding:20px; text-align:center; color:#94a3b8; font-size:13px;">✅ Nenhuma infração neste dia.</div>`;
+    }
+
+    // 3. ATUALIZA OS CARDS (KPIs)
+    updateKPICards();
+}
+function updateKPICards() {
+    let countDay = 0;
+    let countWeek = 0;
+    let countMonth = 0;
+
+    // Precisamos do mês e ano selecionados para comparar
+    const selMonth = selectedDate.getMonth();
+    const selYear = selectedDate.getFullYear();
+
+    allOccurrences.forEach(item => {
+        const dbDateString = item.full_date || item.data_hora || item.date;
+        const itemDate = new Date(dbDateString.replace(/-/g, '/'));
+
+        // 1. KPI Dia
+        if (isSameDay(selectedDate, itemDate)) {
+            countDay++;
+        }
+
+        // 2. KPI Semana (Mesma semana do ano da data selecionada)
+        if (isSameWeek(selectedDate, itemDate)) {
+            countWeek++;
+        }
+
+        // 3. KPI Mês (Mesmo mês e ano da data selecionada)
+        if (itemDate.getMonth() === selMonth && itemDate.getFullYear() === selYear) {
+            countMonth++;
+        }
+    });
+
+    // Atualiza DOM
+    const elDia = document.getElementById('kpiDia');
+    const elSemana = document.getElementById('kpiSemana');
+    const elMes = document.getElementById('kpiMes');
+
+    if (elDia) elDia.innerText = countDay;
+    if (elSemana) elSemana.innerText = countWeek;
+    if (elMes) elMes.innerText = countMonth;
+    
+    // Animação visual opcional (piscar cor)
+    if (elDia) {
+        elDia.style.color = '#E30613';
+        setTimeout(() => elDia.style.color = '', 300);
+    }
+}
+function changeDay(delta) {
+    const oldMonth = selectedDate.getMonth();
+    
+    // Atualiza a data
+    selectedDate.setDate(selectedDate.getDate() + delta);
+    
+    const newMonth = selectedDate.getMonth();
+
+    // Se mudou o mês, precisamos buscar os dados do novo mês na API
+    if (oldMonth !== newMonth) {
+        loadCalendar(); 
+    } else {
+        // Se é o mesmo mês, apenas renderiza com os dados que já temos na memória
+        renderInterface();
     }
 }
 
-function changeDay(delta) {
-    currentDay += delta;
-    if (currentDay < 1) currentDay = 1;
-    if (currentDay > 31) currentDay = 31;
-    renderCalendar();
-}
-
 function loadCalendar() {
-    fetch('../apis/api.php?action=calendar')
+    // Pega o mês e ano da data SELECIONADA, não a data de hoje
+    const month = selectedDate.getMonth() + 1; // JS conta meses de 0 a 11
+    const year = selectedDate.getFullYear();
+
+    fetch(`../apis/api.php?action=calendar&month=${month}&year=${year}`)
         .then(res => res.json())
         .then(data => {
-            calendarData = data;
-            renderCalendar();
+            // Garante que é um array
+            allOccurrences = Array.isArray(data) ? data : [];
+            renderInterface();
         })
-        .catch(err => console.error('Erro calendário:', err));
+        .catch(err => {
+            console.error('Erro calendário:', err);
+            allOccurrences = [];
+            renderInterface();
+        });
 }
 
 
@@ -91,16 +196,16 @@ function openModal(monthIndex, monthName) {
     // --- CORREÇÃO 1: TRANSFORMA MÊS 0 EM MÊS 1 ---
     // Se não fizer isso, Janeiro (0) nunca vai achar dados no banco
     const realMonth = monthIndex + 1;
-    
+
     // --- CORREÇÃO 2: DEFINE O ANO ---
     // Sem o ano, o banco pode se perder
-    const currentYear = new Date().getFullYear(); 
+    const currentYear = new Date().getFullYear();
 
     title.innerText = `${monthName} de ${currentYear}`;
-    
+
     // Limpa e mostra carregando
     tbody.innerHTML = '<tr><td colspan="5" style="text-align:center">Carregando...</td></tr>';
-    
+
     // Abre o modal
     modal.classList.add('open');
 
@@ -121,7 +226,7 @@ function openModal(monthIndex, monthName) {
                 // Ajusta cor do status
                 const statusTexto = row.status_formatado || row.status;
                 let classeStatus = 'status-resolvido';
-                if(statusTexto === 'Pendente') classeStatus = 'status-pendente';
+                if (statusTexto === 'Pendente') classeStatus = 'status-pendente';
 
                 tbody.innerHTML += `
                     <tr>
@@ -170,8 +275,8 @@ document.addEventListener("DOMContentLoaded", function () {
                 type: 'bar',
                 data: {
                     labels: [
-                        'Janeiro','Fevereiro','Março','Abril','Maio','Junho',
-                        'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'
+                        'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+                        'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
                     ],
                     datasets: [
                         {
@@ -230,4 +335,3 @@ document.addEventListener("DOMContentLoaded", function () {
         })
         .catch(err => console.error('Erro gráficos:', err));
 });
-console.log('Charts:', response);

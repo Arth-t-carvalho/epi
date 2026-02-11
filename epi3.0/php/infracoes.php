@@ -1,36 +1,58 @@
 <?php 
-require_once "auth.php"; 
-require_once "database.php"; 
+require_once __DIR__ . '/../config/database.php';
+// require_once __DIR__ . '/../config/auth.php'; 
 
 // ==========================================
-// 1. BUSCAR DADOS DO BANCO
+// 1. LÓGICA DE FILTROS (Mantida)
 // ==========================================
+$filtroData = isset($_GET['periodo']) ? $_GET['periodo'] : 'hoje';
+$filtroEpi = isset($_GET['epi']) ? $_GET['epi'] : '';
+
 try {
-    // Busca as últimas 50 ocorrências para não travar a tela
+    // Lista de EPIs para o select
+    $stmtEpis = $pdo->query("SELECT id, nome FROM epis ORDER BY nome ASC");
+    $listaEpis = $stmtEpis->fetchAll(PDO::FETCH_ASSOC);
+
+    // Query Principal
     $sql = "
         SELECT 
-            o.id,
-            o.data_hora,
+            o.id, o.data_hora,
             a.nome AS aluno_nome,
-            a.curso AS aluno_curso,
+            c.nome AS aluno_curso,
             e.nome AS epi_nome,
-            -- Tenta pegar a foto se existir, senão deixa NULL
-            -- (Ajuste 'o.foto' para o nome real da sua coluna de imagem se for diferente)
-            NULL AS foto_caminho 
+            ev.imagem AS foto_caminho
         FROM ocorrencias o
         JOIN alunos a ON a.id = o.aluno_id
+        LEFT JOIN cursos c ON c.id = a.curso_id
         JOIN epis e ON e.id = o.epi_id
-        ORDER BY o.data_hora DESC
-        LIMIT 50
+        LEFT JOIN evidencias ev ON ev.ocorrencia_id = o.id
+        WHERE 1=1
     ";
+
+    if ($filtroData == 'hoje') {
+        $sql .= " AND DATE(o.data_hora) = CURDATE()";
+    } elseif ($filtroData == '7dias') {
+        $sql .= " AND o.data_hora >= DATE_SUB(NOW(), INTERVAL 7 DAY)";
+    } elseif ($filtroData == '30dias') {
+        $sql .= " AND o.data_hora >= DATE_SUB(NOW(), INTERVAL 30 DAY)";
+    }
+
+    if (!empty($filtroEpi)) {
+        $sql .= " AND o.epi_id = :epi_id";
+    }
+
+    $sql .= " ORDER BY o.data_hora DESC LIMIT 100";
     
-    $stmt = $pdo->query($sql);
+    $stmt = $pdo->prepare($sql);
+    if (!empty($filtroEpi)) {
+        $stmt->bindValue(':epi_id', $filtroEpi);
+    }
+    $stmt->execute();
     $infracoes = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 } catch (PDOException $e) {
-    // Se der erro, cria um array vazio para não quebrar a tela
     $infracoes = [];
-    $erro = $e->getMessage();
+    $listaEpis = [];
 }
 ?>
 
@@ -39,40 +61,63 @@ try {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EPI Guard | Galeria de Infrações</title>
+    <title>EPI Guard | Infrações</title>
     <link rel="stylesheet" href="../css/infracoes.css">
     
     <style>
-        /* Ajustes rápidos para os Cards */
-        .card {
-            background: #fff;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-            overflow: hidden;
-            cursor: pointer;
-            transition: transform 0.2s;
-            border: 1px solid #f1f5f9;
+        /* CSS ESPECÍFICO PARA O MODAL E BOTÃO */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); 
+            display: none; /* JS muda para flex */
+            z-index: 10000;
+            justify-content: center; align-items: center;
         }
-        .card:hover { transform: translateY(-3px); box-shadow: 0 10px 15px rgba(0,0,0,0.1); }
-        .card-img-top {
-            width: 100%;
-            height: 160px;
-            object-fit: cover;
-            background: #f8fafc;
+        .modal-overlay.active { display: flex !important; }
+        
+        .modal-content {
+            background: white; padding: 20px; border-radius: 12px;
+            width: 90%; max-width: 500px; position: relative;
+            text-align: center; display: flex; flex-direction: column; gap: 15px;
         }
-        .card-body { padding: 12px; }
-        .card-title { font-weight: 600; font-size: 14px; margin: 0 0 4px 0; color: #1e293b; }
-        .card-text { font-size: 12px; color: #64748b; margin: 0; }
-        .badge-epi {
-            background-color: #fee2e2; color: #991b1b;
-            padding: 2px 8px; border-radius: 99px; font-size: 10px; font-weight: bold;
-            display: inline-block; margin-top: 6px;
+        
+        .full-image { 
+            width: 100%; max-height: 55vh; object-fit: contain; 
+            border-radius: 8px; background: #000;
         }
+        
+        .btn-assinar {
+            background-color: #DC2626; color: white; border: none;
+            padding: 12px; border-radius: 8px; font-size: 16px; font-weight: bold;
+            cursor: pointer; width: 100%; transition: background 0.2s; margin-top: 10px;
+        }
+        .btn-assinar:hover { background-color: #B91C1C; }
+
+        /* Ajustes do Card */
+        .grid-cards {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 15px; padding: 20px 0;
+        }
+        .violation-card {
+            background: white; border-radius: 10px; overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.08); cursor: pointer;
+            border: 1px solid #f0f0f0; transition: transform 0.2s;
+        }
+        .violation-card:hover { transform: translateY(-3px); }
+        .card-image-wrapper { height: 140px; background: #f3f4f6; position: relative; }
+        .card-image { width: 100%; height: 100%; object-fit: cover; }
+        .card-content { padding: 12px; }
+        .violation-tag { background: #fee2e2; color: #dc2626; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; }
+        .infrator-name { display: block; font-weight: 600; font-size: 14px; margin-top: 6px; color: #1f2937; }
+        .timestamp { color: #6b7280; font-size: 11px; margin-top: 4px; }
+        
+        /* CSS BÁSICO DO HEADER DE FILTRO */
+        .header-controls { display: flex; gap: 15px; align-items: center; margin-top: 15px; flex-wrap: wrap; }
+        .filter-select { padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; }
     </style>
 </head>
 
 <body>
-
     <aside class="sidebar">
         <div class="brand">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#E30613" stroke-width="3"
@@ -90,163 +135,94 @@ try {
     </aside>
 
     <main class="main-content">
-
         <header class="header">
-            <div class="page-title">
-                <h1>Painel Geral</h1>
-                <p>Laboratório B • Monitoramento em Tempo Real</p>
-            </div>
-
-            <div class="header-actions">
-                <button class="btn-export" onclick="alert('Funcionalidade de exportar em desenvolvimento')">
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-                        <path d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z" />
-                    </svg>
-                    &nbsp;Exportar
-                </button>
-
-                <div class="user-profile-trigger" id="profileTrigger" onclick="toggleInstructorCard()">
-                    <div class="user-info-mini">
-                        <span class="user-name">João Silva</span>
-                        <span class="user-role">Téc. Segurança</span>
-                    </div>
-                    <div class="user-avatar">JS</div>
+            <div>
+                <div class="page-title">
+                    <h1>Painel Geral</h1>
+                    <p>Monitoramento de Segurança</p>
                 </div>
-            </div>
 
-            <div class="instructor-card" id="instructorCard" style="display: none;">
-                <div style="margin-bottom: 20px;">
-                    <h3>João Silva</h3>
-                    <p style="color: #64748B; font-size: 13px;">ID: 9821-BR</p>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Cargo</span>
-                    <span class="detail-value">Supervisor</span>
-                </div>
-                <button class="btn-close-card" onclick="toggleInstructorCard()" style="margin-top:10px; width:100%;">Fechar</button>
+                <form method="GET" class="header-controls">
+                    <select name="periodo" class="filter-select" onchange="this.form.submit()">
+                        <option value="hoje" <?php echo $filtroData == 'hoje' ? 'selected' : ''; ?>>Hoje</option>
+                        <option value="7dias" <?php echo $filtroData == '7dias' ? 'selected' : ''; ?>>Últimos 7 dias</option>
+                        <option value="30dias" <?php echo $filtroData == '30dias' ? 'selected' : ''; ?>>Últimos 30 dias</option>
+                        <option value="todos" <?php echo $filtroData == 'todos' ? 'selected' : ''; ?>>Tudo</option>
+                    </select>
+
+                    <select name="epi" class="filter-select" onchange="this.form.submit()">
+                        <option value="">Todos os EPIs</option>
+                        <?php foreach ($listaEpis as $epi): ?>
+                            <option value="<?php echo $epi['id']; ?>" <?php echo $filtroEpi == $epi['id'] ? 'selected' : ''; ?>>
+                                Apenas <?php echo htmlspecialchars($epi['nome']); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </form>
             </div>
         </header>
 
         <div class="gallery-container">
-
-            <div class="filter-bar">
-                <select class="filter-select">
-                    <option>Hoje</option>
-                    <option>Ontem</option>
-                    <option>Últimos 7 dias</option>
-                </select>
-                <select class="filter-select">
-                    <option>Todos os Setores</option>
-                    <option>Usinagem</option>
-                    <option>Solda</option>
-                </select>
-                <select class="filter-select">
-                    <option>Todas as Infrações</option>
-                    <option>Sem Óculos</option>
-                    <option>Sem Capacete</option>
-                </select>
-            </div>
-
             <div class="grid-cards" id="cardsContainer">
-                
                 <?php if (empty($infracoes)): ?>
-                    <p style="padding: 20px; color: #666;">Nenhuma infração registrada recentemente.</p>
+                    <p style="padding:20px; color:#666;">Nenhuma infração encontrada.</p>
                 <?php else: ?>
-                    
                     <?php foreach ($infracoes as $item): 
-                        // Formatações
-                        $dataObj = new DateTime($item['data_hora']);
-                        $dataF = $dataObj->format('d/m/Y');
-                        $horaF = $dataObj->format('H:i');
+                        // Preparação de Dados Segura
+                        $nomeSafe = htmlspecialchars($item['aluno_nome'] ?? 'Desconhecido', ENT_QUOTES);
+                        $epiSafe = htmlspecialchars($item['epi_nome'] ?? 'EPI', ENT_QUOTES);
+                        $setorSafe = htmlspecialchars($item['aluno_curso'] ?? 'Geral', ENT_QUOTES);
                         
-                        // Imagem (Placeholder se não tiver)
-                        // Você pode mudar essa URL para uma imagem padrão sua
-                        $imgSrc = "https://via.placeholder.com/300x200/e2e8f0/94a3b8?text=Sem+Imagem";
+                        $dataObj = new DateTime($item['data_hora']);
+                        $horaF = $dataObj->format('H:i');
+                        $dataBanco = $item['data_hora']; // Data completa Y-m-d H:i:s
+                        
+                        $imgSrc = !empty($item['foto_caminho']) ? "../uploads/" . $item['foto_caminho'] : "https://via.placeholder.com/400x300?text=Sem+Imagem";
                     ?>
-                        <div class="card" onclick="openModalDetails(
-                            '<?php echo addslashes($item['aluno_nome']); ?>', 
-                            '<?php echo addslashes($item['epi_nome']); ?>', 
-                            '<?php echo $horaF; ?>', 
-                            '<?php echo $imgSrc; ?>'
-                        )">
-                            <img src="<?php echo $imgSrc; ?>" class="card-img-top" alt="Infração">
-                            <div class="card-body">
-                                <h3 class="card-title"><?php echo htmlspecialchars($item['aluno_nome']); ?></h3>
-                                <p class="card-text"><?php echo htmlspecialchars($item['aluno_curso']); ?></p>
-                                <span class="badge-epi">Faltou: <?php echo htmlspecialchars($item['epi_nome']); ?></span>
-                                <div style="margin-top: 8px; font-size: 11px; color: #94a3b8; text-align: right;">
-                                    <?php echo $dataF . ' às ' . $horaF; ?>
-                                </div>
+                    
+                    <div class="violation-card" 
+                         onclick="openModalPHP(
+                            '<?php echo $imgSrc; ?>', 
+                            '<?php echo $nomeSafe; ?>', 
+                            '<?php echo $epiSafe; ?>', 
+                            '<?php echo $horaF; ?>',
+                            '<?php echo $dataBanco; ?>'
+                         )">
+                        
+                        <div class="card-image-wrapper">
+                            <img src="<?php echo $imgSrc; ?>" class="card-image">
+                        </div>
+                        
+                        <div class="card-content">
+                            <span class="violation-tag"><?php echo $epiSafe; ?></span>
+                            <span class="infrator-name"><?php echo $nomeSafe; ?></span>
+                            <div class="timestamp">
+                                <?php echo $horaF; ?> • <?php echo $setorSafe; ?>
                             </div>
                         </div>
+                    </div>
                     <?php endforeach; ?>
-
                 <?php endif; ?>
-
             </div>
         </div>
     </main>
 
-    <div class="modal-overlay" id="imageModal" onclick="closeModal(event)" style="display: none;">
+    <div class="modal-overlay" id="imageModal" onclick="closeModal(event)">
         <div class="modal-content">
-            <button class="close-modal-btn" onclick="forceClose()">✕</button>
-            <img src="" id="modalImg" class="full-image" style="max-width: 100%; border-radius: 8px;">
-            <div class="modal-info-bar">
-                <div>
-                    <h3 id="modalName" style="color: #1F2937; margin-bottom: 4px;">Nome do Infrator</h3>
-                    <p id="modalDesc" style="color: #E30613; font-weight: 600;">Infração: ...</p>
-                </div>
-                <div style="text-align: right;">
-                    <p id="modalTime" style="color: #64748B; font-size: 14px;">Horário</p>
-                    <p id="modalCam" style="color: #64748B; font-size: 12px;">Camera 01</p>
-                </div>
+            <button onclick="forceClose()" style="position:absolute; right:10px; top:10px; border:none; background:transparent; font-size:24px; cursor:pointer;">&times;</button>
+            
+            <img src="" id="modalImg" class="full-image">
+            
+            <div style="text-align:left; width:100%;">
+                <h3 id="modalName" style="margin: 5px 0 0 0; color:#1f2937;">Nome</h3>
+                <p id="modalDesc" style="color:#dc2626; font-weight:bold; margin: 5px 0;">Infração</p>
+                <p id="modalTime" style="color:#666; font-size:14px; margin:0;">Horário</p>
             </div>
+
+            <button id="btnAssinar" class="btn-assinar">Assinar Ocorrência</button>
         </div>
     </div>
 
-    <script>
-        // --- Lógica do Modal ---
-        function openModalDetails(nome, epi, hora, imgUrl) {
-            const modal = document.getElementById('imageModal');
-            
-            // Preenche os dados
-            document.getElementById('modalImg').src = imgUrl;
-            document.getElementById('modalName').innerText = nome;
-            document.getElementById('modalDesc').innerText = "Infração: Falta de " + epi;
-            document.getElementById('modalTime').innerText = hora;
-            
-            // Abre o modal
-            modal.style.display = 'flex';
-        }
-
-        function forceClose() {
-            document.getElementById('imageModal').style.display = 'none';
-        }
-
-        function closeModal(event) {
-            // Fecha se clicar fora do conteúdo (no fundo escuro)
-            if (event.target.id === 'imageModal') {
-                forceClose();
-            }
-        }
-
-        // --- Lógica do Dropdown do Usuário ---
-        function toggleInstructorCard() {
-            const card = document.getElementById('instructorCard');
-            if (card.style.display === 'none' || card.style.display === '') {
-                card.style.display = 'block';
-                card.style.position = 'absolute';
-                card.style.right = '20px';
-                card.style.top = '70px';
-                card.style.background = 'white';
-                card.style.padding = '20px';
-                card.style.boxShadow = '0 5px 15px rgba(0,0,0,0.2)';
-                card.style.borderRadius = '10px';
-                card.style.zIndex = '1000';
-            } else {
-                card.style.display = 'none';
-            }
-        }
-    </script>
+    <script src="../js/infracoes.js"></script>
 </body>
 </html>

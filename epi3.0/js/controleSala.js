@@ -16,7 +16,7 @@ async function fetchStudents() {
     // CAMINHO RELATIVO AUTOMÁTICO
     // "../" sai da pasta js
     // "php/" entra na pasta php
-    const url = '../php/controle.api.php'; 
+    const url = '../apis/controle.api.php'; 
 
     console.log("Tentando buscar em: " + url);
 
@@ -71,14 +71,21 @@ function getStudentState(student) {
 }
 
 function renderList(filterText = '', filterStatus = 'all') {
+    // --- 1. CONFIGURAÇÃO VISUAL (Via JS para não mexer no CSS) ---
+    
+    // Define o Grid para ser COMPACTO. 
+    // minmax(200px, 240px) = O card nunca fica menor que 200px e NUNCA maior que 240px (evita ficar gigante).
+    listContainer.style.display = "grid";
+    listContainer.style.gridTemplateColumns = "repeat(auto-fill, minmax(200px, 240px))";
+    listContainer.style.gap = "12px"; 
+    listContainer.style.justifyContent = "start"; // Alinha tudo à esquerda
     listContainer.innerHTML = '';
 
-    // Filtra os alunos baseado na busca e no select
+    // Filtra os alunos
     const filtered = students.filter(s => {
         const state = getStudentState(s);
         const matchesText = s.name.toLowerCase().includes(filterText.toLowerCase());
         
-        // Lógica do filtro de status
         let matchesStatus = false;
         if (filterStatus === 'all') matchesStatus = true;
         else if (filterStatus === 'Risk' && state === 'Risk') matchesStatus = true;
@@ -88,72 +95,126 @@ function renderList(filterText = '', filterStatus = 'all') {
         return matchesText && matchesStatus;
     });
 
+    // Se não achar ninguém
     if (filtered.length === 0) {
-        listContainer.innerHTML = `<div style="padding:20px; color:#999; text-align:center;">Nenhum aluno encontrado.</div>`;
+        listContainer.style.display = "flex"; // Flex para centralizar a mensagem
+        listContainer.style.justifyContent = "center";
+        listContainer.innerHTML = `
+            <div style="text-align:center; padding: 40px; color: #94a3b8; animation: fadeIn 0.5s;">
+                <p style="font-size: 14px;">Nenhum aluno encontrado.</p>
+            </div>`;
         return;
     }
 
+    // --- 2. RENDERIZAÇÃO DOS CARDS ---
     filtered.forEach((student, index) => {
         const state = getStudentState(student);
         const initials = student.name.substring(0, 2).toUpperCase();
 
-        let cardClass = '';
-        let badgeHtml = '';
+        // Configuração de cores e ícones minimalistas
+        let borderColor = 'transparent';
+        let badgeBg = '#F3F4F6';
+        let badgeColor = '#6B7280';
+        let badgeText = 'Regular';
+        let icon = '';
 
-        // Define estilos visuais baseados no estado
-        switch (state) {
-            case 'Risk':
-                cardClass = 'is-risk'; // Define borda vermelha no CSS
-                badgeHtml = '<div class="status-pill status-risk" style="background:#FEF2F2; color:#DC2626; padding:4px 8px; border-radius:12px; font-size:12px; font-weight:bold;">⚠️ SEM EPI</div>';
-                break;
-            case 'History':
-                cardClass = 'is-history'; // Define borda amarela no CSS
-                badgeHtml = '<div class="status-pill status-history" style="background:#FFFBEB; color:#D97706; padding:4px 8px; border-radius:12px; font-size:12px; font-weight:bold;">🔔 HISTÓRICO</div>';
-                break;
-            default:
-                badgeHtml = '<div class="status-pill status-ok" style="background:#ECFDF5; color:#059669; padding:4px 8px; border-radius:12px; font-size:12px; font-weight:bold;">REGULAR</div>';
+        if (state === 'Risk') {
+            borderColor = '#EF4444'; // Vermelho
+            badgeBg = '#FEF2F2';
+            badgeColor = '#EF4444';
+            badgeText = 'Faltante';
+            icon = '⚠️';
+        } else if (state === 'History') {
+            borderColor = '#F59E0B'; // Amarelo
+            badgeBg = '#FFFBEB';
+            badgeColor = '#D97706';
+            badgeText = 'Atenção';
+            icon = '🔔';
         }
 
         const card = document.createElement('div');
-        // Adicione a classe .student-card no seu CSS
-        card.className = `student-card ${cardClass}`;
+        
+        // Estilo Card Compacto e Limpo
         card.style.cssText = `
-            background: white; 
-            padding: 15px; 
-            border-radius: 12px; 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            margin-bottom: 10px; 
+            background: white;
+            border-radius: 12px;
+            padding: 12px;
             cursor: pointer;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-            transition: transform 0.2s;
-            animation: fadeIn 0.3s ease forwards;
-            animation-delay: ${index * 0.05}s;
+            border: 1px solid #E2E8F0;
+            border-left: 4px solid ${state === 'Safe' ? '#10B981' : borderColor};
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+            
+            /* ANIMAÇÃO DE ENTRADA (Pop In) */
+            animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            opacity: 0;
+            transform: scale(0.9);
+            animation-delay: ${index * 0.05}s; /* Efeito cascata */
         `;
-        
-        // Efeito hover simples via JS se nao tiver no CSS
-        card.onmouseover = () => card.style.transform = 'translateY(-2px)';
-        card.onmouseout = () => card.style.transform = 'translateY(0)';
-        
+
+        // Efeito Hover
+        card.onmouseenter = () => {
+            card.style.transform = "translateY(-2px) scale(1.02)";
+            card.style.boxShadow = "0 8px 16px -4px rgba(0,0,0,0.1)";
+        };
+        card.onmouseleave = () => {
+            card.style.transform = "translateY(0) scale(1)";
+            card.style.boxShadow = "0 2px 4px rgba(0,0,0,0.02)";
+        };
+
         card.onclick = () => openModal(student);
 
+        // HTML Interno (Minimalista)
         card.innerHTML = `
-            <div style="display:flex; align-items:center; gap:15px;">
-                <div style="width:40px; height:40px; background:#F3F4F6; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; color:#4B5563;">
-                    ${initials}
-                </div>
-                <div>
-                    <h3 style="margin:0; font-size:16px; color:#1F2937;">${student.name}</h3>
-                    <span style="font-size:13px; color:#6B7280;">ID #${student.id} • ${student.course}</span>
-                </div>
+            <div style="
+                width: 38px; height: 38px; 
+                background: #F8FAFC; 
+                border-radius: 50%; 
+                display: flex; align-items: center; justify-content: center;
+                font-size: 13px; font-weight: 700; color: #475569;
+                border: 1px solid #E2E8F0; flex-shrink: 0;">
+                ${initials}
             </div>
-            ${badgeHtml}
+            
+            <div style="flex: 1; min-width: 0;">
+                <h3 style="margin: 0; font-size: 14px; font-weight: 600; color: #1E293B; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    ${student.name}
+                </h3>
+                <p style="margin: 2px 0 0 0; font-size: 11px; color: #94A3B8;">
+                    ${student.course}
+                </p>
+            </div>
+
+            ${state !== 'Safe' ? `
+            <div style="
+                font-size: 10px; font-weight: 700; 
+                color: ${badgeColor}; background: ${badgeBg};
+                padding: 4px 8px; border-radius: 6px;">
+                ${icon}
+            </div>` : ''}
         `;
+        
         listContainer.appendChild(card);
     });
-}
 
+    // Injeta a animação no CSS da página (apenas uma vez) se não existir
+    if (!document.getElementById('anim-style')) {
+        const style = document.createElement('style');
+        style.id = 'anim-style';
+        style.innerHTML = `
+            @keyframes popIn {
+                0% { opacity: 0; transform: scale(0.8) translateY(10px); }
+                100% { opacity: 1; transform: scale(1) translateY(0); }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+}
 // ==========================================
 // 4. LÓGICA DO MODAL
 // ==========================================

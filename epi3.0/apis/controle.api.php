@@ -1,20 +1,29 @@
 <?php
-ini_set('display_errors', 1);
+// =================================================================================
+// ARQUIVO: apis/controle.api.php
+// =================================================================================
+
+require_once __DIR__ . '/../config/database.php';
+
+// Limpa qualquer saída anterior (espaços em branco, erros) para não quebrar o JSON
+if (ob_get_length()) ob_clean();
+
+header('Content-Type: application/json; charset=utf-8');
+// Desativa exibição de erros no corpo da resposta (eles vão para o log do servidor)
 error_reporting(E_ALL);
-header('Content-Type: application/json');
+ini_set('display_errors', 0);
 
 try {
-    // CAMINHOS (ajuste se necessário, mas o __DIR__ costuma resolver)
-    if (file_exists(__DIR__ . '/auth.php')) {
-        require_once __DIR__ . '/auth.php';
-        require_once __DIR__ . '/database.php';
-    } else {
-        throw new Exception("Arquivos de sistema não encontrados.");
-    }
-
-    // BUSCAR ALUNOS
-    // Pegamos id, nome e curso_id
-    $sql = "SELECT id, nome, curso_id FROM alunos ORDER BY nome ASC";
+    // 1. BUSCAR ALUNOS COM O NOME DO CURSO
+    $sql = "
+        SELECT 
+            a.id, 
+            a.nome, 
+            c.nome AS curso_nome
+        FROM alunos a
+        LEFT JOIN cursos c ON a.curso_id = c.id
+        ORDER BY a.nome ASC
+    ";
     $stmt = $pdo->query($sql);
     $alunos = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -23,14 +32,15 @@ try {
     foreach ($alunos as $aluno) {
         $id = $aluno['id'];
 
-        // 1. CONTA O TOTAL DE OCORRÊNCIAS (Para definir: Regular, Alerta ou Reincidente)
+        // 2. CONTA O TOTAL DE OCORRÊNCIAS (Histórico Geral)
         $stmtCount = $pdo->prepare("SELECT COUNT(*) FROM ocorrencias WHERE aluno_id = ?");
         $stmtCount->execute([$id]);
         $totalOcorrencias = $stmtCount->fetchColumn();
 
-        // 2. VERIFICA SE FALTOU EPI HOJE (Para mostrar no modal)
+        // 3. VERIFICA SE FALTOU EPI HOJE (Risco Ativo)
         $stmtEpi = $pdo->prepare("
-            SELECT e.nome FROM ocorrencias o 
+            SELECT e.nome 
+            FROM ocorrencias o 
             JOIN epis e ON e.id = o.epi_id 
             WHERE o.aluno_id = ? AND DATE(o.data_hora) = CURDATE()
         ");
@@ -38,17 +48,18 @@ try {
         $episFaltantesHoje = $stmtEpi->fetchAll(PDO::FETCH_COLUMN);
 
         $resultado[] = [
-            'id'      => $aluno['id'],
-            'name'    => $aluno['nome'],
-            'course'  => "Curso " . $aluno['curso_id'], 
-            'missing' => $episFaltantesHoje,     // Lista de EPIs que faltou hoje
-            'history_count' => $totalOcorrencias // Número total de erros (0, 1, 2...)
+            'id'            => $aluno['id'],
+            'name'          => $aluno['nome'],
+            'course'        => $aluno['curso_nome'] ?? 'Sem Curso', // Pega o nome real do curso
+            'missing'       => $episFaltantesHoje,     // Array: ['Capacete', 'Óculos'] ou []
+            'history_count' => (int)$totalOcorrencias  // Número: 0, 1, 5...
         ];
     }
 
     echo json_encode($resultado);
 
 } catch (Exception $e) {
+    http_response_code(500);
     echo json_encode(['error' => $e->getMessage()]);
 }
 ?>

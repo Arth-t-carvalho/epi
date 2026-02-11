@@ -31,7 +31,7 @@
             <h1>EPI Guard</h1>
             <p>Monitoramento de Segurança</p>
 
-            <form method="POST" action="autenticar.php" onsubmit="animarLogin(event)">
+            <form method="POST" action="../config/autenticar.php" onsubmit="animarLogin(event)">
                 <div class="input-group">
                     <label>Usuário</label>
                     <input type="text" name="usuario" required>

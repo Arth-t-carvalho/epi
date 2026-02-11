@@ -133,3 +133,25 @@ CREATE TABLE acoes_ocorrencia (
 );
 
 id, ocorrencia_id, tipo, observacao, usuario_id, data_hora
+
+
+
+
+
+TABELA ALUNOS.
+id, nome, usuario, senha, cargo, turno, status
+
+TABELA AÇOES OCORRENCIAS
+id, ocorrencia_id, tipo, observacao, usuario_id, data_hora
+
+TABELA EVIDENCIAS
+id, ocorrencia_id, imagem, origem
+
+TABELA OCORRENCIAS EPI
+id, ocorrencia_id, epi_id
+
+TABELA EPIS
+id, nome
+
+TABELA CURSOS 
+id, nome, sigla

@@ -1,7 +1,7 @@
 <?php 
 // Correção solicitada: auth.php (caminho relativo assumindo que está na pasta /pages/)
-require_once "../php/auth.php"; 
-?>
+require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../config/auth.php';?>
 
 <!DOCTYPE html>
 <html lang="pt-br">
