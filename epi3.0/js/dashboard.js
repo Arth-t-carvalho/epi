@@ -1,181 +1,67 @@
-// ===============================
-// LÓGICA 1: INTERFACE
-// ===============================
-function toggleInstructorCard() {
-    const card = document.getElementById('instructorCard');
-    card.classList.toggle('active');
-}
+// =============================================================
+// DASHBOARD.JS - VERSÃO UNIFICADA (SUA LÓGICA + CALENDÁRIO VISUAL)
+// =============================================================
 
-document.addEventListener('click', function (event) {
-    const card = document.getElementById('instructorCard');
-    const trigger = document.getElementById('profileTrigger');
-    if (!card.contains(event.target) && !trigger.contains(event.target)) {
-        card.classList.remove('active');
+// --- VARIÁVEIS GLOBAIS ---
+let selectedDate = new Date(); // Data usada no Dashboard
+let currCalYear = new Date().getFullYear(); // Ano visualizado no Modal de Escolha de Data
+let currCalMonth = new Date().getMonth();   // Mês visualizado no Modal de Escolha de Data
+let allOccurrences = []; // Dados do BD
+
+// Arrays auxiliares
+const monthsFull = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+
+// --- INICIALIZAÇÃO ---
+document.addEventListener("DOMContentLoaded", function () {
+    loadCalendarData(); // Carrega dados da API
+    loadCharts();       // Carrega Gráficos
+
+    // Listeners do Modal de ESCOLHA DE DATA (Calendário Visual)
+    const btnPrev = document.getElementById('prevMonth');
+    const btnNext = document.getElementById('nextMonth');
+    if (btnPrev) btnPrev.addEventListener('click', () => changeCalMonth(-1));
+    if (btnNext) btnNext.addEventListener('click', () => changeCalMonth(1));
+
+    // Input Manual
+    const input = document.getElementById('manualDateInput');
+    if (input) {
+        input.addEventListener('keydown', (e) => { if (e.key === 'Enter') commitManualDate(); });
+        input.addEventListener('input', maskDateInput);
     }
+
+    // Fechar modais ao clicar fora
+    document.addEventListener('click', (e) => {
+        // Modal Calendário
+        const calModal = document.getElementById('calendarModal');
+        if (calModal && e.target === calModal) toggleCalendar();
+
+        // Modal Detalhes (Gráfico)
+        const detModal = document.getElementById('detailModal');
+        if (detModal && e.target === detModal) detModal.classList.remove('open');
+
+        // Card Instrutor
+        const card = document.getElementById('instructorCard');
+        const trigger = document.getElementById('profileTrigger');
+        if (card && trigger && !card.contains(e.target) && !trigger.contains(e.target)) {
+            card.classList.remove('active');
+        }
+    });
 });
 
-function exportData() {
-    const btn = document.querySelector('.btn-export');
-    const originalHTML = btn.innerHTML;
-    btn.innerHTML = 'Exportando...';
-    btn.style.borderColor = '#E30613';
-    btn.style.color = '#E30613';
-
-    setTimeout(() => {
-        alert("Dados exportados (CSV) com sucesso!");
-        btn.innerHTML = originalHTML;
-        btn.style.borderColor = '';
-        btn.style.color = '';
-    }, 1000);
-}
-
-
 // ===============================
-// LÓGICA 2: CALENDÁRIO (BACKEND)
-// ===============================
-// ===============================
-// LÓGICA 2: CALENDÁRIO & KPIS DINÂMICOS
+// 1. LÓGICA DE DADOS (API & UPDATE)
 // ===============================
 
-// Estado Global
-let selectedDate = new Date(); // Começa com Hoje
-let allOccurrences = []; // Armazena todos os dados vindos do banco
-
-// Função para comparar se duas datas são o mesmo dia
-function isSameDay(d1, d2) {
-    return d1.getFullYear() === d2.getFullYear() &&
-           d1.getMonth() === d2.getMonth() &&
-           d1.getDate() === d2.getDate();
-}
-
-// Função para verificar se está na mesma semana (começando domingo)
-function isSameWeek(d1, d2) {
-    const onejan = new Date(d1.getFullYear(), 0, 1);
-    const today = new Date(d1.getFullYear(), d1.getMonth(), d1.getDate());
-    const dayOfYear = ((today - onejan + 86400000) / 86400000);
-    const week1 = Math.ceil(dayOfYear / 7);
-    
-    const target = new Date(d2.getFullYear(), d2.getMonth(), d2.getDate());
-    const dayOfYearTarget = ((target - onejan + 86400000) / 86400000);
-    const week2 = Math.ceil(dayOfYearTarget / 7);
-
-    return d1.getFullYear() === d2.getFullYear() && week1 === week2;
-}
-
-function renderInterface() {
-    // 1. Atualiza Texto da Data no Navegador
-    const day = String(selectedDate.getDate()).padStart(2, '0');
-    // Obs: O replace remove o ponto que alguns browsers colocam (ex: jan.)
-    const month = selectedDate.toLocaleString('pt-BR', { month: 'short' }).replace('.', '');
-    document.getElementById('displayDay').innerHTML = `${day} <span style="font-size:0.6em; text-transform:uppercase">${month}</span>`;
-
-    // 2. Filtra Ocorrências para a LISTA LATERAL
-    const list = document.getElementById('occurrenceList');
-    list.innerHTML = '';
-
-    const dailyData = allOccurrences.filter(item => {
-        // O PHP agora retorna 'full_date' ou 'data_hora'. 
-        // Vamos garantir que pegamos o campo certo.
-        const dbDateString = item.full_date || item.data_hora || item.date;
-        // Safari/Firefox as vezes tem problemas com datas SQL padrão, o replace ajuda
-        const itemDate = new Date(dbDateString.replace(/-/g, '/')); 
-        
-        return isSameDay(selectedDate, itemDate);
-    });
-
-    if (dailyData.length > 0) {
-        dailyData.forEach(item => {
-            const initials = item.name ? item.name.substring(0, 2).toUpperCase() : '??';
-            list.innerHTML += `
-                <div class="occurrence-item">
-                    <div class="occ-avatar">${initials}</div>
-                    <div class="occ-info">
-                        <span class="occ-name">${item.name}</span>
-                        <span class="occ-desc">${item.desc}</span>
-                    </div>
-                    <div class="occ-time">${item.time}</div>
-                </div>
-            `;
-        });
-    } else {
-        list.innerHTML = `<div class="empty-state" style="padding:20px; text-align:center; color:#94a3b8; font-size:13px;">✅ Nenhuma infração neste dia.</div>`;
-    }
-
-    // 3. ATUALIZA OS CARDS (KPIs)
-    updateKPICards();
-}
-function updateKPICards() {
-    let countDay = 0;
-    let countWeek = 0;
-    let countMonth = 0;
-
-    // Precisamos do mês e ano selecionados para comparar
-    const selMonth = selectedDate.getMonth();
-    const selYear = selectedDate.getFullYear();
-
-    allOccurrences.forEach(item => {
-        const dbDateString = item.full_date || item.data_hora || item.date;
-        const itemDate = new Date(dbDateString.replace(/-/g, '/'));
-
-        // 1. KPI Dia
-        if (isSameDay(selectedDate, itemDate)) {
-            countDay++;
-        }
-
-        // 2. KPI Semana (Mesma semana do ano da data selecionada)
-        if (isSameWeek(selectedDate, itemDate)) {
-            countWeek++;
-        }
-
-        // 3. KPI Mês (Mesmo mês e ano da data selecionada)
-        if (itemDate.getMonth() === selMonth && itemDate.getFullYear() === selYear) {
-            countMonth++;
-        }
-    });
-
-    // Atualiza DOM
-    const elDia = document.getElementById('kpiDia');
-    const elSemana = document.getElementById('kpiSemana');
-    const elMes = document.getElementById('kpiMes');
-
-    if (elDia) elDia.innerText = countDay;
-    if (elSemana) elSemana.innerText = countWeek;
-    if (elMes) elMes.innerText = countMonth;
-    
-    // Animação visual opcional (piscar cor)
-    if (elDia) {
-        elDia.style.color = '#E30613';
-        setTimeout(() => elDia.style.color = '', 300);
-    }
-}
-function changeDay(delta) {
-    const oldMonth = selectedDate.getMonth();
-    
-    // Atualiza a data
-    selectedDate.setDate(selectedDate.getDate() + delta);
-    
-    const newMonth = selectedDate.getMonth();
-
-    // Se mudou o mês, precisamos buscar os dados do novo mês na API
-    if (oldMonth !== newMonth) {
-        loadCalendar(); 
-    } else {
-        // Se é o mesmo mês, apenas renderiza com os dados que já temos na memória
-        renderInterface();
-    }
-}
-
-function loadCalendar() {
-    // Pega o mês e ano da data SELECIONADA, não a data de hoje
-    const month = selectedDate.getMonth() + 1; // JS conta meses de 0 a 11
+function loadCalendarData() {
+    // Pega o mês e ano da data SELECIONADA
+    const month = selectedDate.getMonth() + 1;
     const year = selectedDate.getFullYear();
 
     fetch(`../apis/api.php?action=calendar&month=${month}&year=${year}`)
         .then(res => res.json())
         .then(data => {
-            // Garante que é um array
             allOccurrences = Array.isArray(data) ? data : [];
-            renderInterface();
+            renderInterface(); // Atualiza tela
         })
         .catch(err => {
             console.error('Erro calendário:', err);
@@ -184,136 +70,340 @@ function loadCalendar() {
         });
 }
 
+// Renderiza a interface principal (Lista lateral, Texto data, KPIs)
+// =============================================================
+// SUBSTITUA A FUNÇÃO renderInterface POR ESTA VERSÃO CORRIGIDA:
+// =============================================================
+
+function renderInterface() {
+    // 1. Atualiza Texto da Data no Navegador
+    const day = String(selectedDate.getDate()).padStart(2, '0');
+
+    // PEGANDO O MÊS COMPLETO:
+    const monthFullStr = monthsFull[selectedDate.getMonth()];
+    const yearStr = selectedDate.getFullYear();
+
+    const elNum = document.getElementById('displayDayNum');
+    const elStr = document.getElementById('displayMonthStr');
+
+    if (elNum) elNum.innerText = day;
+
+    // AQUI ESTÁ O PULO DO GATO:
+    // Injetamos o nome completo (ex: Fevereiro) + o Ano
+    if (elStr) elStr.innerText = `${monthFullStr} ${yearStr}`;
+
+    // 2. Filtra Ocorrências para a LISTA LATERAL
+    const list = document.getElementById('occurrenceList');
+    if (list) {
+        list.innerHTML = '';
+        const dailyData = allOccurrences.filter(item => {
+            const dbDateString = item.full_date || item.data_hora || item.date;
+            const itemDate = new Date(dbDateString.replace(/-/g, '/'));
+            return isSameDay(selectedDate, itemDate);
+        });
+
+        if (dailyData.length > 0) {
+            dailyData.forEach(item => {
+                const initials = item.name ? item.name.substring(0, 2).toUpperCase() : '??';
+                list.innerHTML += `
+                    <div class="occurrence-item">
+                        <div class="occ-avatar">${initials}</div>
+                        <div class="occ-info">
+                            <span class="occ-name">${item.name}</span>
+                            <span class="occ-desc">${item.desc}</span>
+                        </div>
+                        <div class="occ-time">${item.time}</div>
+                    </div>`;
+            });
+        } else {
+            list.innerHTML = `<div class="empty-state" style="padding:20px; text-align:center; color:#94a3b8; font-size:13px;">✅ Nenhuma infração neste dia.</div>`;
+        }
+    }
+
+    // 3. Atualiza os KPIs
+    updateKPICards();
+}
+
+// Botões Setas do Dashboard (❮ ❯)
+function changeDay(delta) {
+    const oldMonth = selectedDate.getMonth();
+    selectedDate.setDate(selectedDate.getDate() + delta);
+    const newMonth = selectedDate.getMonth();
+
+    if (oldMonth !== newMonth) {
+        loadCalendarData(); // Mudou mês? Chama PHP
+    } else {
+        renderInterface(); // Mesmo mês? Só filtra JS
+    }
+}
 
 // ===============================
-// LÓGICA 3: MODAL (BACKEND)
+// 2. HELPERS (DATA & KPI)
 // ===============================
-function openModal(monthIndex, monthName) {
+
+function isSameDay(d1, d2) {
+    return d1.getFullYear() === d2.getFullYear() &&
+        d1.getMonth() === d2.getMonth() &&
+        d1.getDate() === d2.getDate();
+}
+
+function isSameWeek(d1, d2) {
+    const onejan = new Date(d1.getFullYear(), 0, 1);
+    const today = new Date(d1.getFullYear(), d1.getMonth(), d1.getDate());
+    const dayOfYear = ((today - onejan + 86400000) / 86400000);
+    const week1 = Math.ceil(dayOfYear / 7);
+    const target = new Date(d2.getFullYear(), d2.getMonth(), d2.getDate());
+    const dayOfYearTarget = ((target - onejan + 86400000) / 86400000);
+    const week2 = Math.ceil(dayOfYearTarget / 7);
+    return d1.getFullYear() === d2.getFullYear() && week1 === week2;
+}
+
+function updateKPICards() {
+    let countDay = 0, countWeek = 0, countMonth = 0;
+    const selMonth = selectedDate.getMonth();
+    const selYear = selectedDate.getFullYear();
+
+    allOccurrences.forEach(item => {
+        const dbDateString = item.full_date || item.data_hora || item.date;
+        const itemDate = new Date(dbDateString.replace(/-/g, '/'));
+
+        if (isSameDay(selectedDate, itemDate)) countDay++;
+        if (isSameWeek(selectedDate, itemDate)) countWeek++;
+        if (itemDate.getMonth() === selMonth && itemDate.getFullYear() === selYear) countMonth++;
+    });
+
+    const elDia = document.getElementById('kpiDia');
+    const elSemana = document.getElementById('kpiSemana');
+    const elMes = document.getElementById('kpiMes');
+
+    if (elDia) elDia.innerText = countDay;
+    if (elSemana) elSemana.innerText = countWeek;
+    if (elMes) elMes.innerText = countMonth;
+}
+
+// ===============================
+// 3. MODAL VISUAL (SELETOR DE DATA)
+// ===============================
+
+function toggleCalendar() {
+    const modal = document.getElementById('calendarModal');
+    if (!modal) return; // Segurança se não existir no HTML
+
+    if (!modal.classList.contains('active')) {
+        // Sincroniza visualização com a data atual selecionada
+        currCalYear = selectedDate.getFullYear();
+        currCalMonth = selectedDate.getMonth();
+        renderCalendarGrid();
+        modal.classList.add('active');
+    } else {
+        modal.classList.remove('active');
+    }
+}
+
+function renderCalendarGrid() {
+    const daysTag = document.getElementById("calendarDays");
+    const monthTxt = document.getElementById("calMonthDisplay");
+    const yearTxt = document.getElementById("calYearDisplay");
+
+    if (!daysTag) return;
+
+    let firstDayofMonth = new Date(currCalYear, currCalMonth, 1).getDay();
+    let lastDateofMonth = new Date(currCalYear, currCalMonth + 1, 0).getDate();
+    let lastDayofMonthIndex = new Date(currCalYear, currCalMonth, lastDateofMonth).getDay();
+    let liTag = "";
+
+    // Dias mês anterior
+    for (let i = firstDayofMonth; i > 0; i--) {
+        liTag += `<li class="inactive">${new Date(currCalYear, currCalMonth, 0).getDate() - i + 1}</li>`;
+    }
+    // Dias mês atual
+    for (let i = 1; i <= lastDateofMonth; i++) {
+        let isToday = i === new Date().getDate() && currCalMonth === new Date().getMonth() && currCalYear === new Date().getFullYear() ? "today" : "";
+        let isSelected = i === selectedDate.getDate() && currCalMonth === selectedDate.getMonth() && currCalYear === selectedDate.getFullYear() ? "active" : "";
+        if (isSelected) isToday = ""; // Prioridade visual para seleção
+
+        liTag += `<li class="${isToday} ${isSelected}" onclick="selectDayAndClose(${i})">${i}</li>`;
+    }
+    // Dias próximo mês
+    for (let i = lastDayofMonthIndex; i < 6; i++) {
+        liTag += `<li class="inactive">${i - lastDayofMonthIndex + 1}</li>`;
+    }
+
+    if (monthTxt) monthTxt.innerText = monthsFull[currCalMonth];
+    if (yearTxt) yearTxt.innerText = currCalYear;
+    daysTag.innerHTML = liTag;
+}
+
+function changeCalMonth(delta) {
+    currCalMonth += delta;
+    if (currCalMonth < 0 || currCalMonth > 11) {
+        const d = new Date(currCalYear, currCalMonth, 1);
+        currCalMonth = d.getMonth();
+        currCalYear = d.getFullYear();
+    }
+    renderCalendarGrid();
+}
+
+function selectDayAndClose(day) {
+    selectedDate = new Date(currCalYear, currCalMonth, day);
+    loadCalendarData(); // Chama PHP pois pode ter mudado o mês/ano
+    toggleCalendar();   // Fecha modal
+}
+
+// Input Manual
+function maskDateInput(e) {
+    let v = e.target.value.replace(/\D/g, '');
+    if (v.length > 2) v = v.slice(0, 2) + '/' + v.slice(2);
+    if (v.length > 5) v = v.slice(0, 5) + '/' + v.slice(5);
+    e.target.value = v;
+}
+
+// =============================================================
+// SUBSTITUA A FUNÇÃO commitManualDate POR ESTA VERSÃO MELHORADA
+// E ADICIONE A FUNÇÃO triggerInputError LOGO ABAIXO DELA
+// =============================================================
+
+function commitManualDate() {
+    const input = document.getElementById('manualDateInput');
+    const v = input.value;
+
+    // 1. Validação básica de tamanho
+    if (v.length < 10) {
+        triggerInputError();
+        return;
+    }
+
+    const day = parseInt(v.slice(0, 2), 10);
+    // Subtrai 1 porque o objeto Date usa meses de 0 a 11
+    const monthIndex = parseInt(v.slice(3, 5), 10) - 1;
+    const year = parseInt(v.slice(6, 10), 10);
+
+    // 2. Validação de Mês (deve ser entre 0 e 11)
+    if (monthIndex < 0 || monthIndex > 11 || isNaN(monthIndex)) {
+        triggerInputError();
+        return;
+    }
+
+    // 3. Validação Inteligente de Dias (inclui Fevereiro e Bissextos)
+    // O dia '0' do próximo mês retorna o último dia do mês atual.
+    const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+
+    if (day < 1 || day > daysInMonth || isNaN(day)) {
+        // Ex: Se tentar dia 30 de Fevereiro, daysInMonth será 28 ou 29, e vai cair aqui.
+        triggerInputError();
+        return;
+    }
+
+    // Se passou por tudo, sucesso!
+    currCalMonth = monthIndex;
+    currCalYear = year;
+    selectDayAndClose(day);
+    input.value = "";
+}
+
+// --- FUNÇÃO AUXILIAR PARA A ANIMAÇÃO DE ERRO ---
+function triggerInputError() {
+    const wrapper = document.querySelector('.input-wrapper');
+    // Adiciona a classe que faz chacoalhar
+    wrapper.classList.add('error-shake');
+
+    // Remove a classe depois que a animação termina (400ms)
+    // para que possa chacoalhar de novo se clicar novamente
+    setTimeout(() => {
+        wrapper.classList.remove('error-shake');
+    }, 400);
+}
+
+// ===============================
+// 4. INTERFACE E GRÁFICOS
+// ===============================
+
+function toggleInstructorCard() {
+    const card = document.getElementById('instructorCard');
+    if (card) card.classList.toggle('active');
+}
+
+function exportData() {
+    const btn = document.querySelector('.btn-export');
+    if (!btn) return;
+    const originalHTML = btn.innerHTML;
+    btn.innerHTML = 'Exportando...';
+    btn.style.color = '#E30613';
+    setTimeout(() => {
+        alert("Dados exportados (CSV) com sucesso!");
+        btn.innerHTML = originalHTML;
+        btn.style.color = '';
+    }, 1000);
+}
+
+// Modal de Detalhes (Vem do clique no gráfico)
+function openDetailModal(monthIndex, monthName) {
     const modal = document.getElementById('detailModal');
     const title = document.getElementById('modalMonthTitle');
     const tbody = document.getElementById('modalTableBody');
 
-    // --- CORREÇÃO 1: TRANSFORMA MÊS 0 EM MÊS 1 ---
-    // Se não fizer isso, Janeiro (0) nunca vai achar dados no banco
-    const realMonth = monthIndex + 1;
+    if (!modal) return;
 
-    // --- CORREÇÃO 2: DEFINE O ANO ---
-    // Sem o ano, o banco pode se perder
+    const realMonth = monthIndex + 1;
     const currentYear = new Date().getFullYear();
 
     title.innerText = `${monthName} de ${currentYear}`;
-
-    // Limpa e mostra carregando
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center">Carregando...</td></tr>';
-
-    // Abre o modal
     modal.classList.add('open');
 
-    // Faz a chamada corrigida para api_alunos.php (note o realMonth)
     fetch(`../apis/api.php?action=modal_details&month=${realMonth}&year=${currentYear}`)
         .then(res => res.json())
         .then(data => {
             tbody.innerHTML = '';
-
-            // Se a lista estiver vazia
             if (!data || data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 20px;">Nenhum registro encontrado neste mês.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 20px;">Nenhum registro encontrado.</td></tr>';
                 return;
             }
-
-            // Se tiver dados, monta a tabela
             data.forEach(row => {
-                // Ajusta cor do status
                 const statusTexto = row.status_formatado || row.status;
-                let classeStatus = 'status-resolvido';
-                if (statusTexto === 'Pendente') classeStatus = 'status-pendente';
-
+                let classeStatus = statusTexto === 'Pendente' ? 'status-pendente' : 'status-resolvido';
                 tbody.innerHTML += `
                     <tr>
                         <td>${row.data}</td>
                         <td style="font-weight:500;">${row.aluno}</td>
                         <td>${row.epis}</td>
                         <td>${row.hora}</td>
-                        <td>
-                            <span class="status-badge ${classeStatus}">
-                                ${statusTexto}
-                            </span>
-                        </td>
-                    </tr>
-                `;
+                        <td><span class="status-badge ${classeStatus}">${statusTexto}</span></td>
+                    </tr>`;
             });
         })
-        .catch(err => {
+        .catch(() => {
             tbody.innerHTML = '<tr><td colspan="5" style="color:red; text-align:center">Erro na conexão.</td></tr>';
         });
 }
 
-function closeModal() {
-    document.getElementById('detailModal').classList.remove('open');
-}
-
-document.getElementById('detailModal').addEventListener('click', function (e) {
-    if (e.target === this) closeModal();
-});
-
-
-// ===============================
-// LÓGICA 4: CHART.JS (BACKEND)
-// ===============================
-document.addEventListener("DOMContentLoaded", function () {
-
-    loadCalendar();
-
+function loadCharts() {
     fetch('../apis/api.php?action=charts')
         .then(res => res.json())
         .then(response => {
-
-
-            // -------- GRÁFICO DE BARRAS --------
+            // BAR CHART
             const ctxMain = document.getElementById('mainChart').getContext('2d');
             new Chart(ctxMain, {
                 type: 'bar',
                 data: {
-                    labels: [
-                        'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-                        'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
-                    ],
+                    labels: monthsFull,
                     datasets: [
-                        {
-                            label: 'Capacete',
-                            data: response.bar.capacete,
-                            backgroundColor: '#E30613',
-                            borderRadius: 4
-                        },
-                        {
-                            label: 'Óculos',
-                            data: response.bar.oculos,
-                            backgroundColor: '#1F2937',
-                            borderRadius: 4
-                        },
-                        {
-                            label: 'Total',
-                            data: response.bar.total,
-                            backgroundColor: '#9CA3AF',
-                            borderRadius: 4
-                        }
+                        { label: 'Capacete', data: response.bar.capacete, backgroundColor: '#E30613', borderRadius: 4 },
+                        { label: 'Óculos', data: response.bar.oculos, backgroundColor: '#1F2937', borderRadius: 4 },
+                        { label: 'Total', data: response.bar.total, backgroundColor: '#9CA3AF', borderRadius: 4 }
                     ]
                 },
                 options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
+                    responsive: true, maintainAspectRatio: false,
                     onClick: (evt, active, chart) => {
                         if (active.length > 0) {
-                            openModal(
-                                active[0].index,
-                                chart.data.labels[active[0].index]
-                            );
+                            // CHAMA A FUNÇÃO openDetailModal (Lógica sua)
+                            openDetailModal(active[0].index, chart.data.labels[active[0].index]);
                         }
                     }
                 }
             });
 
-            // -------- GRÁFICO DE ROSCA --------
+            // DOUGHNUT CHART
             const ctxDoughnut = document.getElementById('doughnutChart').getContext('2d');
             new Chart(ctxDoughnut, {
                 type: 'doughnut',
@@ -325,13 +415,114 @@ document.addEventListener("DOMContentLoaded", function () {
                         borderWidth: 2
                     }]
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    cutout: '75%'
-                }
+                options: { responsive: true, maintainAspectRatio: false, cutout: '75%' }
             });
-
         })
         .catch(err => console.error('Erro gráficos:', err));
+}
+
+
+// =============================================================
+// LÓGICA DOS DROPDOWNS (MÊS E ANO)
+// Cole isso no final do dashboard.js ou dentro da seção de Helpers
+// =============================================================
+
+// 1. Alternar visualização da lista de MESES
+function toggleMonthList() {
+    const drop = document.getElementById('monthDropdown');
+    const yearDrop = document.getElementById('yearDropdown');
+
+    // Fecha o de ano se estiver aberto
+    if (yearDrop) yearDrop.classList.remove('active');
+
+    if (!drop.classList.contains('active')) {
+        // Preenche a lista antes de mostrar
+        let html = '';
+        monthsFull.forEach((m, index) => {
+            const isSelected = index === currCalMonth ? 'selected' : '';
+            html += `<div class="dropdown-item ${isSelected}" onclick="selectMonth(${index})">${m}</div>`;
+        });
+        drop.innerHTML = html;
+        drop.classList.add('active');
+    } else {
+        drop.classList.remove('active');
+    }
+}
+
+// 2. Alternar visualização da lista de ANOS
+function toggleYearList() {
+    const drop = document.getElementById('yearDropdown');
+    const monthDrop = document.getElementById('monthDropdown');
+
+    // Fecha o de mês se estiver aberto
+    if (monthDrop) monthDrop.classList.remove('active');
+
+    if (!drop.classList.contains('active')) {
+        let html = '';
+        const currentYear = new Date().getFullYear();
+        // Gera 5 anos para trás e 5 para frente
+        for (let i = currentYear - 5; i <= currentYear + 5; i++) {
+            const isSelected = i === currCalYear ? 'selected' : '';
+            html += `<div class="dropdown-item ${isSelected}" onclick="selectYear(${i})">${i}</div>`;
+        }
+        drop.innerHTML = html;
+        drop.classList.add('active');
+    } else {
+        drop.classList.remove('active');
+    }
+}
+
+// 3. Ação ao clicar em um Mês
+function selectMonth(index) {
+    currCalMonth = index;
+    renderCalendarGrid(); // Atualiza o grid
+    document.getElementById('monthDropdown').classList.remove('active'); // Fecha menu
+}
+
+// 4. Ação ao clicar em um Ano
+function selectYear(year) {
+    currCalYear = year;
+    renderCalendarGrid(); // Atualiza o grid
+    document.getElementById('yearDropdown').classList.remove('active'); // Fecha menu
+}
+
+// 5. Fechar dropdowns se clicar fora (UX Importante)
+window.addEventListener('click', function (e) {
+    const monthContainer = document.getElementById('monthSelector');
+    const yearContainer = document.getElementById('yearSelector');
+
+    // Se o clique NÃO foi dentro do container do mês, fecha o dropdown do mês
+    if (monthContainer && !monthContainer.contains(e.target)) {
+        const drop = document.getElementById('monthDropdown');
+        if (drop) drop.classList.remove('active');
+    }
+
+    // Se o clique NÃO foi dentro do container do ano, fecha o dropdown do ano
+    if (yearContainer && !yearContainer.contains(e.target)) {
+        const drop = document.getElementById('yearDropdown');
+        if (drop) drop.classList.remove('active');
+    }
 });
+
+function highlightDaily() {
+    const target = document.getElementById('cardRegistroDiario');
+
+    if (target) {
+        // Remove para poder repetir a animação se clicar de novo
+        target.classList.remove('shake-attention');
+
+        // Força o navegador a resetar o estado do elemento
+        void target.offsetWidth;
+
+        // Adiciona a classe da chacoalhada
+        target.classList.add('shake-attention');
+
+        // Rola a página até o card (opcional, mas recomendado)
+        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        // Remove a classe após a animação acabar (0.6s + margem)
+        setTimeout(() => {
+            target.classList.remove('shake-attention');
+        }, 1000);
+    }
+}

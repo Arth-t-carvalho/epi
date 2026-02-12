@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro Diário - EPI Guard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* =========================================
+           VARIÁVEIS & RESET
+           ========================================= */
+        :root {
+            --primary: #E30613;          
+            --primary-hover: #bf040f;
+            --secondary: #1F2937;        
+            --text-muted: #64748B;       
+            --bg-body: #e6e8ec;          
+            --bg-card: #ffffff;          
+            --bg-input: #F8FAFC;
+            --radius: 16px;              
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+
+        body {
+            background-color: #d1d5db; 
+            display: flex; justify-content: center; align-items: center; height: 100vh;
+        }
+
+        /* =========================================
+           CARD PRINCIPAL (REGISTRO DIÁRIO)
+           ========================================= */
+        .main-card {
+            background: #EAECEF; 
+            width: 700px; /* AUMENTADO DE 500px PARA 700px */
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .card-header-title {
+            font-size: 1.1rem; font-weight: 700; color: var(--secondary); margin-bottom: 16px;
+        }
+
+        /* BARRA DE NAVEGAÇÃO DE DATA */
+        .date-nav-bar {
+            background: white; border-radius: 8px; padding: 10px 16px;
+            display: flex; align-items: center; justify-content: space-between;
+            border: 1px solid #e5e7eb; box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+
+        .nav-arrow-btn {
+            width: 36px; height: 36px; border: 1px solid var(--secondary);
+            background: transparent; border-radius: 8px;
+            display: flex; justify-content: center; align-items: center;
+            cursor: pointer; transition: 0.2s; color: var(--secondary);
+        }
+        .nav-arrow-btn:hover { background: var(--secondary); color: white; }
+        .nav-arrow-btn svg { width: 18px; height: 18px; fill: currentColor; }
+
+        .date-center-display {
+            text-align: center; cursor: pointer; padding: 5px 40px; /* Mais espaço clicável */
+            border-radius: 8px; transition: 0.2s;
+        }
+        .date-center-display:hover { background: #f3f4f6; }
+
+        .date-main-text { font-size: 1.5rem; font-weight: 800; color: var(--primary); line-height: 1.1; }
+        .date-month-text { font-size: 1.1rem; font-weight: 700; color: var(--primary); text-transform: uppercase; }
+        .date-sub-text { font-size: 0.8rem; color: var(--text-muted); font-weight: 500; margin-top: 2px; }
+
+        /* =========================================
+           MODAL DO CALENDÁRIO
+           ========================================= */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(5px);
+            z-index: 999; opacity: 0; visibility: hidden;
+            transition: all 0.3s ease;
+            display: flex; justify-content: center; align-items: center;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+
+        .calendar-wrapper {
+            background: var(--bg-card); width: 400px;
+            border-radius: var(--radius); box-shadow: 0 20px 50px -10px rgba(0, 0, 0, 0.25);
+            padding: 25px; transform: scale(0.9) translateY(20px);
+            transition: 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            position: relative;
+        }
+        .modal-overlay.active .calendar-wrapper { transform: scale(1) translateY(0); }
+
+        /* HEADER DO CALENDÁRIO */
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #f1f5f9; }
+        
+        .month-nav-wrapper { display: flex; align-items: center; gap: 8px; }
+        .nav-btn { height: 28px; width: 28px; border-radius: 50%; cursor: pointer; color: var(--text-muted); display: flex; justify-content: center; align-items: center; font-size: 1rem; user-select: none; transition: 0.2s; }
+        .nav-btn:hover { background: #f1f5f9; color: var(--primary); }
+
+        /* --- NOVO: DROPDOWN DE MÊS --- */
+        .month-selector { position: relative; }
+        .month-display {
+            font-size: 1.1rem; font-weight: 700; color: var(--secondary);
+            cursor: pointer; padding: 4px 8px; border-radius: 6px;
+            display: flex; align-items: center; gap: 4px; transition: 0.2s;
+            text-transform: capitalize;
+        }
+        .month-display:hover { background: #f1f5f9; color: var(--primary); }
+        .month-display svg { width: 12px; height: 12px; fill: currentColor; opacity: 0.5; }
+        
+        .month-dropdown {
+            position: absolute; top: 110%; left: 50%; transform: translateX(-50%);
+            width: 140px; max-height: 250px;
+            background: white; border-radius: 8px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+            overflow-y: auto; display: none; z-index: 20;
+            border: 1px solid #e2e8f0;
+        }
+        .month-selector.open .month-dropdown { display: block; }
+        .month-option {
+            padding: 10px 0; text-align: center;
+            font-size: 0.9rem; color: var(--secondary);
+            cursor: pointer; transition: 0.1s; border-bottom: 1px solid #f8fafc;
+        }
+        .month-option:last-child { border-bottom: none; }
+        .month-option:hover { background: #f8fafc; color: var(--primary); font-weight: 600; }
+        .month-option.selected { background: var(--primary); color: white; font-weight: 600; }
+
+        /* DROPDOWN DE ANO (Mantido) */
+        .year-selector { position: relative; }
+        .year-display { display: flex; align-items: center; gap: 4px; font-size: 1rem; font-weight: 700; color: var(--primary); cursor: pointer; padding: 6px 12px; border-radius: 8px; background: #FFF0F1; transition: 0.2s; }
+        .year-display:hover { background: #fee2e2; }
+        .year-display svg { width: 14px; height: 14px; fill: currentColor; }
+        .year-dropdown { position: absolute; top: 110%; right: 0; width: 100px; max-height: 200px; background: white; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); overflow-y: auto; display: none; z-index: 20; border: 1px solid #e2e8f0; }
+        .year-selector.open .year-dropdown { display: block; }
+        .year-option { padding: 8px 0; text-align: center; font-size: 0.9rem; color: var(--secondary); cursor: pointer; transition: 0.1s; }
+        .year-option:hover { background: #f8fafc; color: var(--primary); font-weight: 600; }
+        .year-option.selected { background: var(--primary); color: white; font-weight: 600; }
+
+        /* BODY E INPUT */
+        .calendar-body .weeks { display: flex; margin-bottom: 10px; }
+        .calendar-body .weeks li { width: calc(100% / 7); list-style: none; text-align: center; font-size: 0.8rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; }
+        .calendar-body .days { display: flex; flex-wrap: wrap; min-height: 270px; align-content: flex-start; }
+        .calendar-body .days li { width: calc(100% / 7); height: 40px; list-style: none; text-align: center; line-height: 40px; cursor: pointer; font-size: 0.9rem; color: var(--secondary); margin-bottom: 5px; border-radius: 50%; transition: 0.2s; position: relative; }
+        .days li.inactive { color: #cbd5e1; pointer-events: none; }
+        .days li:not(.active):not(.inactive):hover { background: #f1f5f9; color: var(--primary); font-weight: 700; }
+        .days li.active { background: var(--primary); color: #fff; font-weight: 600; box-shadow: 0 4px 10px rgba(227, 6, 19, 0.4); }
+        .days li.today:not(.active) { border: 1px solid var(--primary); color: var(--primary); font-weight: 700; }
+        
+        .close-btn { position: absolute; top: -12px; right: -12px; background: white; border: 1px solid #e2e8f0; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; color: var(--text-muted); display: flex; justify-content: center; align-items: center; transition: 0.2s; }
+        .close-btn:hover { color: var(--primary); border-color: var(--primary); }
+
+        .input-area { margin-top: 5px; padding-top: 15px; border-top: 1px solid #f1f5f9; }
+        .input-wrapper { position: relative; display: flex; align-items: center; }
+        .input-wrapper input { width: 100%; padding: 12px 40px; border: 1px solid #e2e8f0; background: var(--bg-input); border-radius: 8px; font-size: 14px; color: var(--secondary); outline: none; transition: all 0.2s; font-family: 'Inter', monospace; font-weight: 500; }
+        .input-wrapper input:focus { background: white; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(227, 6, 19, 0.1); }
+        .input-error { animation: shake 0.4s ease-in-out; border-color: var(--primary) !important; box-shadow: 0 0 0 4px rgba(227, 6, 19, 0.25) !important; }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-4px); } 40% { transform: translateX(4px); } 60% { transform: translateX(-4px); } 80% { transform: translateX(4px); } }
+        
+        .icon-left { position: absolute; left: 12px; width: 18px; height: 18px; fill: var(--text-muted); pointer-events: none; }
+        .btn-action-right { position: absolute; right: 10px; width: 28px; height: 28px; border-radius: 6px; color: white; background: var(--primary); cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; }
+        .btn-action-right svg { width: 16px; height: 16px; fill: white; }
+        .btn-action-right:hover { background: var(--primary-hover); transform: scale(1.05); }
+
+    </style>
+</head>
+<body>
+
+    <div class="main-card">
+        <h3 class="card-header-title">Registro Diário</h3>
+        
+        <div class="date-nav-bar">
+            <button class="nav-arrow-btn" onclick="changeDay(-1)">
+                <svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+            </button>
+
+            <div class="date-center-display" onclick="toggleCalendar()">
+                <div class="date-main-text">
+                    <span id="displayDay">27</span>
+                    <span id="displayMonth" class="date-month-text">FEV</span>
+                </div>
+                <div id="displaySubtext" class="date-sub-text">Carregando...</div>
+            </div>
+
+            <button class="nav-arrow-btn" onclick="changeDay(1)">
+                <svg viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+            </button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="calendarModal">
+        <div class="calendar-wrapper">
+            <button class="close-btn" onclick="toggleCalendar()">✕</button>
+            
+            <header>
+                <div class="month-nav-wrapper">
+                    <span id="prev" class="nav-btn">❮</span>
+                    
+                    <div class="month-selector" id="monthSelector">
+                        <div class="month-display" onclick="toggleMonthList()">
+                            <span id="monthDisplay">Janeiro</span>
+                            <svg viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>
+                        </div>
+                        <div class="month-dropdown" id="monthDropdown">
+                            </div>
+                    </div>
+
+                    <span id="next" class="nav-btn">❯</span>
+                </div>
+
+                <div class="year-selector" id="yearSelector">
+                    <div class="year-display" onclick="toggleYearList()">
+                        <span id="yearDisplay">2026</span>
+                        <svg viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>
+                    </div>
+                    <div class="year-dropdown" id="yearDropdown"></div>
+                </div>
+            </header>
+            
+            <div class="calendar-body">
+                <ul class="weeks">
+                    <li>Dom</li><li>Seg</li><li>Ter</li><li>Qua</li><li>Qui</li><li>Sex</li><li>Sáb</li>
+                </ul>
+                <ul class="days"></ul>
+            </div>
+            
+            <div class="input-area">
+                <div class="input-wrapper">
+                    <svg class="icon-left" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                    <input type="text" id="dateInput" placeholder="DD/MM/AAAA" maxlength="10">
+                    <div class="btn-action-right" onclick="commitManualDate()">
+                        <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let globalDate = new Date();
+
+        const displayDay = document.getElementById("displayDay");
+        const displayMonth = document.getElementById("displayMonth");
+        const displaySubtext = document.getElementById("displaySubtext");
+
+        const daysTag = document.querySelector(".days");
+        const monthDisplay = document.getElementById("monthDisplay");
+        const yearDisplay = document.getElementById("yearDisplay");
+        const prevNextIcon = document.querySelectorAll(".month-nav-wrapper .nav-btn"); // Seletor ajustado
+        
+        const yearSelector = document.getElementById("yearSelector");
+        const yearDropdown = document.getElementById("yearDropdown");
+        
+        const monthSelector = document.getElementById("monthSelector");
+        const monthDropdown = document.getElementById("monthDropdown");
+
+        const dateInput = document.getElementById("dateInput");
+
+        let currYear, currMonth, selectedDay, selectedMonth, selectedYear;
+        const monthsFull = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+        const monthsShort = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
+        const weekDays = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
+
+        // ============================
+        // LÓGICA DE EXIBIÇÃO
+        // ============================
+        function updateMainDisplay() {
+            const d = globalDate.getDate();
+            const mIndex = globalDate.getMonth();
+            const y = globalDate.getFullYear();
+            const wIndex = globalDate.getDay();
+
+            displayDay.innerText = String(d).padStart(2, '0');
+            displayMonth.innerText = monthsShort[mIndex];
+            
+            const today = new Date();
+            const isToday = d === today.getDate() && mIndex === today.getMonth() && y === today.getFullYear();
+            displaySubtext.innerText = isToday ? "Dia Atual" : weekDays[wIndex];
+        }
+
+        function changeDay(offset) {
+            globalDate.setDate(globalDate.getDate() + offset);
+            updateMainDisplay();
+        }
+
+        function toggleCalendar() {
+            const modal = document.getElementById('calendarModal');
+            if (!modal.classList.contains('active')) {
+                currYear = globalDate.getFullYear();
+                currMonth = globalDate.getMonth();
+                selectedDay = globalDate.getDate();
+                selectedMonth = globalDate.getMonth();
+                selectedYear = globalDate.getFullYear();
+
+                dateInput.value = "";
+                dateInput.classList.remove('input-error');
+                
+                // Fecha dropdowns se estiverem abertos de sessões anteriores
+                yearSelector.classList.remove('open');
+                monthSelector.classList.remove('open');
+
+                renderCalendar();
+                modal.classList.add('active');
+                
+                modal.addEventListener('click', function(e) {
+                    if (e.target === this) toggleCalendar();
+                }, { once: true });
+            } else {
+                modal.classList.remove('active');
+            }
+        }
+
+        // ============================
+        // LÓGICA DO CALENDÁRIO
+        // ============================
+        const renderCalendar = () => {
+            let firstDayofMonth = new Date(currYear, currMonth, 1).getDay(); 
+            let lastDateofMonth = new Date(currYear, currMonth + 1, 0).getDate(); 
+            let lastDayofMonthIndex = new Date(currYear, currMonth, lastDateofMonth).getDay();
+            let liTag = "";
+
+            for (let i = firstDayofMonth; i > 0; i--) { 
+                liTag += `<li class="inactive">${new Date(currYear, currMonth, 0).getDate() - i + 1}</li>`;
+            }
+
+            for (let i = 1; i <= lastDateofMonth; i++) { 
+                let isToday = i === new Date().getDate() && currMonth === new Date().getMonth() && currYear === new Date().getFullYear() ? "today" : "";
+                let isActive = i === selectedDay && currMonth === selectedMonth && currYear === selectedYear ? "active" : "";
+                if(isActive) isToday = "";
+                liTag += `<li class="${isToday} ${isActive}" onclick="selectDayAndClose(${i})">${i}</li>`;
+            }
+
+            for (let i = lastDayofMonthIndex; i < 6; i++) { 
+                liTag += `<li class="inactive">${i - lastDayofMonthIndex + 1}</li>`;
+            }
+
+            monthDisplay.innerText = monthsFull[currMonth];
+            yearDisplay.innerText = currYear;
+            daysTag.innerHTML = liTag;
+        }
+
+        function selectDayAndClose(day) {
+            globalDate = new Date(currYear, currMonth, day);
+            updateMainDisplay();
+            toggleCalendar();
+        }
+
+        function commitManualDate() {
+            const v = dateInput.value;
+            if (v.length < 10) {
+                const inputEl = document.querySelector('.input-wrapper input');
+                inputEl.classList.remove('input-error'); void inputEl.offsetWidth; inputEl.classList.add('input-error');
+                return;
+            }
+            const day = parseInt(v.slice(0, 2));
+            const month = parseInt(v.slice(3, 5)) - 1; 
+            const year = parseInt(v.slice(6, 10));
+            
+            globalDate = new Date(year, month, day);
+            updateMainDisplay();
+            toggleCalendar();
+        }
+
+        // ============================
+        // DROPDOWN DE ANO
+        // ============================
+        function toggleYearList() { 
+            monthSelector.classList.remove('open'); // Fecha o mês se estiver aberto
+            yearSelector.classList.toggle('open'); 
+            if (yearSelector.classList.contains('open')) populateYears(); 
+        }
+
+        function populateYears() {
+            yearDropdown.innerHTML = "";
+            for (let y = 1900; y <= 2100; y++) {
+                const div = document.createElement("div");
+                div.innerText = y; div.classList.add("year-option");
+                if (y === currYear) div.classList.add("selected");
+                div.onclick = (e) => { e.stopPropagation(); currYear = y; renderCalendar(); yearSelector.classList.remove('open'); };
+                yearDropdown.appendChild(div);
+            }
+        }
+
+        // ============================
+        // NOVO: DROPDOWN DE MÊS
+        // ============================
+        function toggleMonthList() {
+            yearSelector.classList.remove('open'); // Fecha o ano se estiver aberto
+            monthSelector.classList.toggle('open');
+            if (monthSelector.classList.contains('open')) populateMonths();
+        }
+
+        function populateMonths() {
+            monthDropdown.innerHTML = "";
+            monthsFull.forEach((m, index) => {
+                const div = document.createElement("div");
+                div.innerText = m;
+                div.classList.add("month-option");
+                if (index === currMonth) div.classList.add("selected");
+                
+                div.onclick = (e) => {
+                    e.stopPropagation();
+                    currMonth = index;
+                    renderCalendar();
+                    monthSelector.classList.remove('open');
+                };
+                monthDropdown.appendChild(div);
+            });
+        }
+
+        // Fechar dropdowns ao clicar fora
+        document.addEventListener('click', (e) => {
+            if (!yearSelector.contains(e.target)) yearSelector.classList.remove('open');
+            if (!monthSelector.contains(e.target)) monthSelector.classList.remove('open');
+        });
+
+        // Setas do cabeçalho
+        prevNextIcon.forEach(icon => { 
+            icon.addEventListener("click", () => { 
+                currMonth = icon.id === "prev" ? currMonth - 1 : currMonth + 1;
+                if(currMonth < 0 || currMonth > 11) { 
+                    const d = new Date(currYear, currMonth, 1); 
+                    currYear = d.getFullYear(); currMonth = d.getMonth(); 
+                } 
+                renderCalendar(); 
+            });
+        });
+
+        // Inputs
+        dateInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') commitManualDate(); });
+        dateInput.addEventListener('focus', () => dateInput.classList.remove('input-error'));
+        dateInput.addEventListener('input', (e) => {
+            dateInput.classList.remove('input-error');
+            let v = e.target.value.replace(/\D/g, ''); 
+            if (v.length >= 2) {
+                let dayPart = parseInt(v.substring(0, 2));
+                if (dayPart > 31) dayPart = 31; if (dayPart === 0) dayPart = 1;
+                v = String(dayPart).padStart(2, '0') + v.substring(2);
+            }
+            if (v.length >= 4) {
+                let dayPart = parseInt(v.substring(0, 2));
+                let monthPart = parseInt(v.substring(2, 4));
+                if (monthPart > 12) monthPart = 12; if (monthPart === 0) monthPart = 1;
+                if (monthPart === 2 && dayPart > 28) dayPart = 28;
+                else if ([4, 6, 9, 11].includes(monthPart) && dayPart > 30) dayPart = 30;
+                v = String(dayPart).padStart(2, '0') + String(monthPart).padStart(2, '0') + v.substring(4);
+            }
+            if (v.length > 2) v = v.slice(0, 2) + '/' + v.slice(2);
+            if (v.length > 5) v = v.slice(0, 5) + '/' + v.slice(5);
+            e.target.value = v;
+        });
+
+        updateMainDisplay();
+
+    </script>
+</body>
+</html>
