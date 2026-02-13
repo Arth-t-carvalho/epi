@@ -42,9 +42,39 @@ if ($totalAlunos === 0) {
 }
 
 // ALUNOS CRÍTICOS
-$stmtAlunosCriticos = $pdo->prepare("SELECT a.nome, COUNT(o.id) AS total FROM alunos a JOIN ocorrencias o ON a.id = o.aluno_id WHERE a.curso_id = ? GROUP BY a.id ORDER BY total DESC LIMIT 4");
+$stmtAlunosCriticos = $pdo->prepare("SELECT a.nome, COUNT(o.id) AS total FROM alunos a JOIN ocorrencias o ON a.id = o.aluno_id WHERE a.curso_id = ? GROUP BY a.id ORDER BY total DESC LIMIT 5");
 $stmtAlunosCriticos->execute([$cursoId]);
 $alunosCriticos = $stmtAlunosCriticos->fetchAll(PDO::FETCH_ASSOC);
+
+
+// --- COMPARAÇÕES (Acrescentar aqui) ---
+
+// Ontem (para comparar com hoje)
+$stmtOntem = $pdo->prepare("SELECT COUNT(o.id) FROM ocorrencias o JOIN alunos a ON a.id = o.aluno_id WHERE a.curso_id = ? AND o.data_hora >= CURDATE() - INTERVAL 1 DAY AND o.data_hora < CURDATE()");
+$stmtOntem->execute([$cursoId]);
+$infraOntem = (int) $stmtOntem->fetchColumn();
+$percDia = ($infraOntem > 0) ? round((($infraDia - $infraOntem) / $infraOntem) * 100, 1) : ($infraDia * 100);
+
+// Semana Anterior
+$stmtSemAnt = $pdo->prepare("SELECT COUNT(o.id) FROM ocorrencias o JOIN alunos a ON a.id = o.aluno_id WHERE a.curso_id = ? AND YEARWEEK(o.data_hora, 1) = YEARWEEK(CURDATE() - INTERVAL 1 WEEK, 1)");
+$stmtSemAnt->execute([$cursoId]);
+$infraSemanaAnterior = (int) $stmtSemAnt->fetchColumn();
+$percSemana = ($infraSemanaAnterior > 0) ? round((($infraSemana - $infraSemanaAnterior) / $infraSemanaAnterior) * 100, 1) : ($infraSemana * 100);
+
+// Mês Anterior
+$stmtMesAnt = $pdo->prepare("SELECT COUNT(o.id) FROM ocorrencias o JOIN alunos a ON a.id = o.aluno_id WHERE a.curso_id = ? AND MONTH(o.data_hora) = MONTH(CURDATE() - INTERVAL 1 MONTH) AND YEAR(o.data_hora) = YEAR(CURDATE() - INTERVAL 1 MONTH)");
+$stmtMesAnt->execute([$cursoId]);
+$infraMesAnterior = (int) $stmtMesAnt->fetchColumn();
+$percMes = ($infraMesAnterior > 0) ? round((($infraMes - $infraMesAnterior) / $infraMesAnterior) * 100, 1) : ($infraMes * 100);
+
+
+$stmtRankingModal = $pdo->prepare("SELECT a.nome, COUNT(o.id) AS total FROM alunos a JOIN ocorrencias o ON a.id = o.aluno_id WHERE a.curso_id = ? GROUP BY a.id ORDER BY total DESC");
+$stmtRankingModal->execute([$cursoId]);
+$rankingModal = $stmtRankingModal->fetchAll(PDO::FETCH_ASSOC);
+
+
+
+
 ?>
 
 <!DOCTYPE html>
@@ -514,42 +544,188 @@ $alunosCriticos = $stmtAlunosCriticos->fetchAll(PDO::FETCH_ASSOC);
             background: #f8fafc;
             padding: 8px;
             border-radius: 8px;
-            border: 1px solid var(--border);
+            border: none
+                /* Box Shadow: Horizontal, Vertical, Desfoque, Espalhamento, Cor */
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+                0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
 
         /* Animação de pulo e brilho vermelho */
         /* Animação de chacoalhada (Shake) */
-        @keyframes shake-red {
-
-            0%,
-            100% {
-                transform: translateX(0);
-                border-color: var(--border);
-            }
-
-            10%,
-            30%,
-            50%,
-            70%,
-            90% {
-                transform: translateX(-5px);
-                border-color: #E30613;
-            }
-
-            20%,
-            40%,
-            60%,
-            80% {
-                transform: translateX(5px);
-                border-color: #E30613;
-            }
-        }
 
         .shake-attention {
             animation: shake-red 0.6s cubic-bezier(.36, .07, .19, .97) both;
             box-shadow: 0 0 15px rgba(227, 6, 19, 0.4);
             z-index: 10;
             /* Garante que fique acima de outros elementos ao tremer */
+        }
+
+        /* Container do Modal */
+        .modal-ranking-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.7);
+            z-index: 99999;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(8px);
+            animation: fadeIn 0.3s ease;
+        }
+
+        /* O Quadrado Centralizado */
+        .modal-ranking-square {
+            background: white;
+            width: 500px;
+            height: 500px;
+            border-radius: 20px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        /* Cabeçalho */
+        .modal-ranking-header {
+            padding: 24px;
+            background: #ffffff;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .modal-ranking-header h2 {
+            margin: 0;
+            font-size: 1.25rem;
+            color: #1e293b;
+        }
+
+        /* Tabela e Scroll */
+        .modal-ranking-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px 20px;
+        }
+
+        /* Customização da Barra de Rolagem (Scrollbar) */
+        .modal-ranking-body::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .modal-ranking-body::-webkit-scrollbar-thumb {
+            border-radius: 10px;
+        }
+
+        /* Estilo da Tabela */
+        .ranking-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0 8px;
+        }
+
+        .ranking-table th {
+            position: sticky;
+            top: 0;
+            background: white;
+            padding: 10px;
+            font-size: 11px;
+            text-transform: uppercase;
+            color: #94a3b8;
+            z-index: 10;
+        }
+
+        .ranking-row {
+            transition: all 0.2s ease;
+        }
+
+        /* Efeito Hover nas Linhas */
+        .ranking-row:hover {
+            transform: translateX(5px);
+        }
+
+        .ranking-row:hover td {
+            background: #f8fafc !important;
+        }
+
+        .ranking-row td {
+            padding: 12px 15px;
+            font-size: 14px;
+            background: #ffffff;
+        }
+
+        /* Arredondar pontas das linhas para o efeito de card */
+        .ranking-row td:first-child {
+            border-radius: 10px 0 0 10px;
+            font-weight: 700;
+            color: #94a3b8;
+        }
+
+        .ranking-row td:last-child {
+            border-radius: 0 10px 10px 0;
+            text-align: right;
+        }
+
+        /* Badge de Ocorrências */
+        .badge-count {
+            background: #fee2e2;
+            color: #ef4444;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-weight: 800;
+            font-size: 12px;
+        }
+
+        /* Animação */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.45);
+            }
+
+            to {
+                opacity: 0;
+                transform: scale(1);
+            }
+        }
+
+        /* Estilo Base para os Novos Status */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+
+        /* Cores específicas para cada nível */
+        .status-critico {
+            background-color: #fee2e2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+        }
+
+        .status-alto {
+            background-color: #ffedd5;
+            color: #ea580c;
+            border: 1px solid #fed7aa;
+        }
+
+        .status-moderado {
+            background-color: #fef9c3;
+            color: #a16207;
+            border: 1px solid #fef08a;
+        }
+
+        .status-baixo {
+            background-color: #dcfce7;
+            color: #16a34a;
+            border: 1px solid #bbf7d0;
         }
     </style>
 </head>
@@ -614,32 +790,50 @@ $alunosCriticos = $stmtAlunosCriticos->fetchAll(PDO::FETCH_ASSOC);
         </header>
 
         <div class="kpi-grid">
-            <div class="card" id="cardInfraDia" onclick="highlightDaily()" style="cursor: pointer;">
+            <div class="card" id="cardInfraDia" onclick="highlightDaily('dia')" style="cursor: pointer;">
                 <div class="kpi-header">Infrações Diarias</div>
                 <div class="kpi-value">
                     <span id="kpiDia"><?php echo $infraDia; ?></span>
-                    <span class="badge up">↗ DATA</span>
+                    <span id="badgeDia" class="badge <?php echo $percDia >= 0 ? 'up' : 'down'; ?>">
+                        <?php echo ($percDia >= 0 ? '↗ ' : '↘ ') . abs($percDia); ?>%
+                    </span>
                 </div>
             </div>
-            <div class="card">
+            <div class="card" onclick="highlightDaily('semana')">
                 <div class="kpi-header">Infrações Semanais</div>
                 <div class="kpi-value">
                     <span id="kpiSemana"><?php echo $infraSemana; ?></span>
-                    <span class="badge down">↘ SEMANA</span>
+                    <span id="badgeSemana" class="badge <?php echo $percSemana >= 0 ? 'up' : 'down'; ?>">
+                        <?php echo ($percSemana >= 0 ? '↗ ' : '↘ ') . abs($percSemana); ?>%
+                    </span>
                 </div>
             </div>
-            <div class="card">
+            <div class="card" onclick="highlightDaily('mes')">
                 <div class="kpi-header">Infrações Mês</div>
                 <div class="kpi-value">
                     <span id="kpiMes"><?php echo $infraMes; ?></span>
-                    <span class="badge up">↗ MÊS</span>
+                    <span id="badgeMes" class="badge <?php echo $percMes >= 0 ? 'up' : 'down'; ?>">
+                        <?php echo ($percMes >= 0 ? '↗ ' : '↘ ') . abs($percMes); ?>%
+                    </span>
                 </div>
             </div>
             <div class="card">
                 <div class="kpi-header">Conformidade</div>
                 <div class="kpi-value">
                     <span id="kpiMedia"><?php echo $mediaTurma; ?>%</span>
-                    <span class="badge up">↗ 1.2%</span>
+
+                    <?php
+                    // Lógica de Status de Conformidade
+                    if ($mediaTurma < 70) {
+                        echo '<span class="status-badge status-critico" title="Risco alto! Bloqueio ou intervenção imediata">🚨 CRÍTICO</span>';
+                    } elseif ($mediaTurma < 85) {
+                        echo '<span class="status-badge status-alto" title="Abaixo do aceitável! Requer plano de ação">🟠 ALTO RISCO</span>';
+                    } elseif ($mediaTurma < 95) {
+                        echo '<span class="status-badge status-moderado" title="Nível aceitável, mas requer monitoramento">🟡 MODERADO</span>';
+                    } else {
+                        echo '<span class="status-badge status-baixo" title="Operação segura e padrão ideal">🟢 CONTROLADO</span>';
+                    }
+                    ?>
                 </div>
             </div>
         </div>
@@ -724,8 +918,10 @@ $alunosCriticos = $stmtAlunosCriticos->fetchAll(PDO::FETCH_ASSOC);
                     <?php endif; ?>
 
                     <div style="text-align:center; margin-top:10px;">
-                        <a href="#" style="font-size:12px; color:#64748B; text-decoration:none; font-weight: 600;">Ver
-                            todos</a>
+                        <a href="javascript:void(0)" onclick="openAlunosModal()"
+                            style="font-size:12px; color:#64748B; text-decoration:none; font-weight: 600;">
+                            Ver todos
+                        </a>
                     </div>
                 </div>
             </div>
@@ -834,6 +1030,56 @@ $alunosCriticos = $stmtAlunosCriticos->fetchAll(PDO::FETCH_ASSOC);
             </div>
         </div>
     </div>
+    <div id="alunosRankingModal" class="modal-ranking-overlay" onclick="closeAlunosModal()">
+        <div class="modal-ranking-square" onclick="event.stopPropagation()">
+
+            <div class="modal-ranking-header">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h2>Ranking Geral</h2>
+                        <p style="margin: 0; font-size: 0.8rem; color: #64748b;">Lista completa de infrações</p>
+                    </div>
+                    <button onclick="closeAlunosModal()"
+                        style="background:none; border:none; cursor:pointer; font-size:20px; color:#94a3b8;">&times;</button>
+                </div>
+            </div>
+
+            <div class="modal-ranking-body">
+                <table class="ranking-table">
+                    <thead>
+                        <tr>
+                            <th>Pos.</th>
+                            <th>Aluno</th>
+                            <th style="text-align: right;">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if (!empty($rankingModal)): ?>
+                            <?php foreach ($rankingModal as $index => $aluno): ?>
+                                <tr class="ranking-row">
+                                    <td>#<?php echo $index + 1; ?></td>
+                                    <td><?php echo htmlspecialchars($aluno['nome']); ?></td>
+                                    <td>
+                                        <span class="badge-count"><?php echo $aluno['total']; ?></span>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <tr>
+                                <td colspan="3" style="text-align:center;">Nenhum dado encontrado.</td>
+                            </tr>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+
+            <div style="padding: 15px; border-top: 1px solid #f1f5f9; text-align: center;">
+
+            </div>
+        </div>
+    </div>
+
+
     <script src="../js/dashboard.js"></script>
 </body>
 

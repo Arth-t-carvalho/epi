@@ -122,6 +122,7 @@ function renderInterface() {
 
     // 3. Atualiza os KPIs
     updateKPICards();
+    updatePercentagesDinamicamente();
 }
 
 // Botões Setas do Dashboard (❮ ❯)
@@ -179,6 +180,7 @@ function updateKPICards() {
     if (elDia) elDia.innerText = countDay;
     if (elSemana) elSemana.innerText = countWeek;
     if (elMes) elMes.innerText = countMonth;
+
 }
 
 // ===============================
@@ -504,25 +506,112 @@ window.addEventListener('click', function (e) {
     }
 });
 
-function highlightDaily() {
-    const target = document.getElementById('cardRegistroDiario');
+function highlightDaily(periodo) {
+    window.location.href = 'infracoes.php?filtro=' + periodo;
+}
+// Função extra para atualizar as porcentagens dinamicamente
+function refreshBadgesJS(currentVal, previousVal, elementId) {
+    const badge = document.getElementById(elementId);
+    if (!badge) return;
 
-    if (target) {
-        // Remove para poder repetir a animação se clicar de novo
-        target.classList.remove('shake-attention');
+    let percent = 0;
+    if (previousVal > 0) {
+        percent = Math.round(((currentVal - previousVal) / previousVal) * 100);
+    } else {
+        percent = currentVal * 100;
+    }
 
-        // Força o navegador a resetar o estado do elemento
-        void target.offsetWidth;
+    // Define a classe de cor e a seta
+    const isUp = percent >= 0;
+    badge.className = `badge ${isUp ? 'up' : 'down'}`;
+    badge.innerHTML = `${isUp ? '↗' : '↘'} ${Math.abs(percent)}%`;
+}
 
-        // Adiciona a classe da chacoalhada
-        target.classList.add('shake-attention');
+// --- MONITOR DE MUDANÇAS (FUNÇÃO EXTRA) ---
+// --- MONITOR DE MUDANÇAS (FUNÇÃO EXTRA) ---
+const observer = new MutationObserver(() => {
+    // 1. Pega os valores atuais (KPIs)
+    const totalHoje = parseInt(document.getElementById('kpiDia')?.innerText) || 0;
+    const totalSemana = parseInt(document.getElementById('kpiSemana')?.innerText) || 0;
+    const totalMes = parseInt(document.getElementById('kpiMes')?.innerText) || 0;
 
-        // Rola a página até o card (opcional, mas recomendado)
-        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // 2. Cálculo dos Períodos Anteriores para comparação
+    const datePrevDay = new Date(selectedDate);
+    datePrevDay.setDate(datePrevDay.getDate() - 1);
 
-        // Remove a classe após a animação acabar (0.6s + margem)
-        setTimeout(() => {
-            target.classList.remove('shake-attention');
-        }, 1000);
+    // Ontem
+    const totalOntem = allOccurrences.filter(item => {
+        const itemDate = new Date((item.full_date || item.data_hora || item.date).replace(/-/g, '/'));
+        return isSameDay(datePrevDay, itemDate);
+    }).length;
+
+    // 3. Atualiza as Badges chamando a sua função refreshBadgesJS
+    refreshBadgesJS(totalHoje, totalOntem, 'badgeDia');
+
+    // Nota: Como a lógica de "semana anterior" exige um cálculo de calendário mais complexo,
+    // por enquanto o observer vai resetar as outras badges ou mantê-las consistentes.
+});
+
+// Configura o observador para vigiar o texto dos KPIs
+// Usamos characterData e childList para garantir que qualquer mudança de texto dispare
+const config = { childList: true, characterData: true, subtree: true };
+
+if (document.getElementById('kpiDia')) observer.observe(document.getElementById('kpiDia'), config);
+if (document.getElementById('kpiSemana')) observer.observe(document.getElementById('kpiSemana'), config);
+if (document.getElementById('kpiMes')) observer.observe(document.getElementById('kpiMes'), config);
+
+
+function updatePercentagesDinamicamente() {
+    // 1. Definir datas de comparação
+    const datePrevDay = new Date(selectedDate);
+    datePrevDay.setDate(datePrevDay.getDate() - 1);
+
+    const startOfSelectedWeek = new Date(selectedDate);
+    startOfSelectedWeek.setDate(selectedDate.getDate() - selectedDate.getDay());
+    const datePrevWeek = new Date(startOfSelectedWeek);
+    datePrevWeek.setDate(datePrevWeek.getDate() - 7);
+
+    // 2. Contar ocorrências nos períodos anteriores
+    let totalOntem = 0;
+    let totalSemanaPassada = 0;
+
+    allOccurrences.forEach(item => {
+        const itemDate = new Date((item.full_date || item.data_hora || item.date).replace(/-/g, '/'));
+
+        if (isSameDay(datePrevDay, itemDate)) totalOntem++;
+        if (isSameWeek(datePrevWeek, itemDate)) totalSemanaPassada++;
+    });
+
+    // 3. Pegar os valores atuais que já estão na tela
+    const totalHoje = parseInt(document.getElementById('kpiDia').innerText) || 0;
+    const totalSemana = parseInt(document.getElementById('kpiSemana').innerText) || 0;
+
+    // 4. Chamar a função de badges (aquela que você já tem no arquivo)
+    refreshBadgesJS(totalHoje, totalOntem, 'badgeDia');
+    refreshBadgesJS(totalSemana, totalSemanaPassada, 'badgeSemana');
+}
+
+function closeModal() {
+    const modal = document.getElementById('detailModal');
+    if (modal) {
+        modal.classList.remove('active'); // Remove a classe que mostra o modal
+        // Caso o seu CSS use display: block/none em vez de classes:
+        modal.style.display = 'none';
+    }
+}
+
+function openAlunosModal() {
+    const modal = document.getElementById('alunosRankingModal');
+    if (modal) {
+        modal.style.display = 'flex'; // Força a exibição
+        modal.style.opacity = '1';    // Garante visibilidade
+        modal.style.visibility = 'visible';
+    }
+}
+
+function closeAlunosModal() {
+    const modal = document.getElementById('alunosRankingModal');
+    if (modal) {
+        modal.style.display = 'none';
     }
 }

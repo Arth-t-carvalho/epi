@@ -1,11 +1,12 @@
-<?php 
+<?php
 require_once __DIR__ . '/../config/database.php';
 // require_once __DIR__ . '/../config/auth.php'; 
 
 // ==========================================
 // 1. LÓGICA DE FILTROS (Mantida)
 // ==========================================
-$filtroData = isset($_GET['periodo']) ? $_GET['periodo'] : 'hoje';
+// Captura 'periodo' (usado pelo form interno) ou 'filtro' (vindo do dashboard)
+$filtroData = $_GET['periodo'] ?? ($_GET['filtro'] ?? 'hoje');
 $filtroEpi = isset($_GET['epi']) ? $_GET['epi'] : '';
 
 try {
@@ -29,11 +30,11 @@ try {
         WHERE 1=1
     ";
 
-    if ($filtroData == 'hoje') {
+    if ($filtroData == 'hoje' || $filtroData == 'dia') {
         $sql .= " AND DATE(o.data_hora) = CURDATE()";
-    } elseif ($filtroData == '7dias') {
+    } elseif ($filtroData == '7dias' || $filtroData == 'semana') {
         $sql .= " AND o.data_hora >= DATE_SUB(NOW(), INTERVAL 7 DAY)";
-    } elseif ($filtroData == '30dias') {
+    } elseif ($filtroData == '30dias' || $filtroData == 'mes') {
         $sql .= " AND o.data_hora >= DATE_SUB(NOW(), INTERVAL 30 DAY)";
     }
 
@@ -42,7 +43,7 @@ try {
     }
 
     $sql .= " ORDER BY o.data_hora DESC LIMIT 100";
-    
+
     $stmt = $pdo->prepare($sql);
     if (!empty($filtroEpi)) {
         $stmt->bindValue(':epi_id', $filtroEpi);
@@ -58,62 +59,148 @@ try {
 
 <!DOCTYPE html>
 <html lang="pt-br">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EPI Guard | Infrações</title>
     <link rel="stylesheet" href="../css/infracoes.css">
-    
+
     <style>
         /* CSS ESPECÍFICO PARA O MODAL E BOTÃO */
         .modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85); 
-            display: none; /* JS muda para flex */
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: none;
+            /* JS muda para flex */
             z-index: 10000;
-            justify-content: center; align-items: center;
+            justify-content: center;
+            align-items: center;
         }
-        .modal-overlay.active { display: flex !important; }
-        
+
+        .modal-overlay.active {
+            display: flex !important;
+        }
+
         .modal-content {
-            background: white; padding: 20px; border-radius: 12px;
-            width: 90%; max-width: 500px; position: relative;
-            text-align: center; display: flex; flex-direction: column; gap: 15px;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 500px;
+            position: relative;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
         }
-        
-        .full-image { 
-            width: 100%; max-height: 55vh; object-fit: contain; 
-            border-radius: 8px; background: #000;
+
+        .full-image {
+            width: 100%;
+            max-height: 55vh;
+            object-fit: contain;
+            border-radius: 8px;
+            background: #000;
         }
-        
+
         .btn-assinar {
-            background-color: #DC2626; color: white; border: none;
-            padding: 12px; border-radius: 8px; font-size: 16px; font-weight: bold;
-            cursor: pointer; width: 100%; transition: background 0.2s; margin-top: 10px;
+            background-color: #DC2626;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.2s;
+            margin-top: 10px;
         }
-        .btn-assinar:hover { background-color: #B91C1C; }
+
+        .btn-assinar:hover {
+            background-color: #B91C1C;
+        }
 
         /* Ajustes do Card */
         .grid-cards {
-            display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-            gap: 15px; padding: 20px 0;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 15px;
+            padding: 20px 0;
         }
+
         .violation-card {
-            background: white; border-radius: 10px; overflow: hidden;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.08); cursor: pointer;
-            border: 1px solid #f0f0f0; transition: transform 0.2s;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+            cursor: pointer;
+            border: 1px solid #f0f0f0;
+            transition: transform 0.2s;
         }
-        .violation-card:hover { transform: translateY(-3px); }
-        .card-image-wrapper { height: 140px; background: #f3f4f6; position: relative; }
-        .card-image { width: 100%; height: 100%; object-fit: cover; }
-        .card-content { padding: 12px; }
-        .violation-tag { background: #fee2e2; color: #dc2626; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; }
-        .infrator-name { display: block; font-weight: 600; font-size: 14px; margin-top: 6px; color: #1f2937; }
-        .timestamp { color: #6b7280; font-size: 11px; margin-top: 4px; }
-        
+
+        .violation-card:hover {
+            transform: translateY(-3px);
+        }
+
+        .card-image-wrapper {
+            height: 140px;
+            background: #f3f4f6;
+            position: relative;
+        }
+
+        .card-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .card-content {
+            padding: 12px;
+        }
+
+        .violation-tag {
+            background: #fee2e2;
+            color: #dc2626;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .infrator-name {
+            display: block;
+            font-weight: 600;
+            font-size: 14px;
+            margin-top: 6px;
+            color: #1f2937;
+        }
+
+        .timestamp {
+            color: #6b7280;
+            font-size: 11px;
+            margin-top: 4px;
+        }
+
         /* CSS BÁSICO DO HEADER DE FILTRO */
-        .header-controls { display: flex; gap: 15px; align-items: center; margin-top: 15px; flex-wrap: wrap; }
-        .filter-select { padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; }
+        .header-controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .filter-select {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            cursor: pointer;
+        }
     </style>
 </head>
 
@@ -144,9 +231,9 @@ try {
 
                 <form method="GET" class="header-controls">
                     <select name="periodo" class="filter-select" onchange="this.form.submit()">
-                        <option value="hoje" <?php echo $filtroData == 'hoje' ? 'selected' : ''; ?>>Hoje</option>
-                        <option value="7dias" <?php echo $filtroData == '7dias' ? 'selected' : ''; ?>>Últimos 7 dias</option>
-                        <option value="30dias" <?php echo $filtroData == '30dias' ? 'selected' : ''; ?>>Últimos 30 dias</option>
+                        <option value="hoje" <?php echo ($filtroData == 'hoje' || $filtroData == 'dia') ? 'selected' : ''; ?>>Hoje</option>
+                        <option value="7dias" <?php echo ($filtroData == '7dias' || $filtroData == 'semana') ? 'selected' : ''; ?>>Últimos 7 dias</option>
+                        <option value="30dias" <?php echo ($filtroData == '30dias' || $filtroData == 'mes') ? 'selected' : ''; ?>>Últimos 30 dias</option>
                         <option value="todos" <?php echo $filtroData == 'todos' ? 'selected' : ''; ?>>Tudo</option>
                     </select>
 
@@ -167,40 +254,39 @@ try {
                 <?php if (empty($infracoes)): ?>
                     <p style="padding:20px; color:#666;">Nenhuma infração encontrada.</p>
                 <?php else: ?>
-                    <?php foreach ($infracoes as $item): 
+                    <?php foreach ($infracoes as $item):
                         // Preparação de Dados Segura
                         $nomeSafe = htmlspecialchars($item['aluno_nome'] ?? 'Desconhecido', ENT_QUOTES);
                         $epiSafe = htmlspecialchars($item['epi_nome'] ?? 'EPI', ENT_QUOTES);
                         $setorSafe = htmlspecialchars($item['aluno_curso'] ?? 'Geral', ENT_QUOTES);
-                        
+
                         $dataObj = new DateTime($item['data_hora']);
                         $horaF = $dataObj->format('H:i');
                         $dataBanco = $item['data_hora']; // Data completa Y-m-d H:i:s
-                        
+                
                         $imgSrc = !empty($item['foto_caminho']) ? "../uploads/" . $item['foto_caminho'] : "https://via.placeholder.com/400x300?text=Sem+Imagem";
-                    ?>
-                    
-                    <div class="violation-card" 
-                         onclick="openModalPHP(
+                        ?>
+
+                        <div class="violation-card" onclick="openModalPHP(
                             '<?php echo $imgSrc; ?>', 
                             '<?php echo $nomeSafe; ?>', 
                             '<?php echo $epiSafe; ?>', 
                             '<?php echo $horaF; ?>',
                             '<?php echo $dataBanco; ?>'
                          )">
-                        
-                        <div class="card-image-wrapper">
-                            <img src="<?php echo $imgSrc; ?>" class="card-image">
-                        </div>
-                        
-                        <div class="card-content">
-                            <span class="violation-tag"><?php echo $epiSafe; ?></span>
-                            <span class="infrator-name"><?php echo $nomeSafe; ?></span>
-                            <div class="timestamp">
-                                <?php echo $horaF; ?> • <?php echo $setorSafe; ?>
+
+                            <div class="card-image-wrapper">
+                                <img src="<?php echo $imgSrc; ?>" class="card-image">
+                            </div>
+
+                            <div class="card-content">
+                                <span class="violation-tag"><?php echo $epiSafe; ?></span>
+                                <span class="infrator-name"><?php echo $nomeSafe; ?></span>
+                                <div class="timestamp">
+                                    <?php echo $horaF; ?> • <?php echo $setorSafe; ?>
+                                </div>
                             </div>
                         </div>
-                    </div>
                     <?php endforeach; ?>
                 <?php endif; ?>
             </div>
@@ -209,10 +295,11 @@ try {
 
     <div class="modal-overlay" id="imageModal" onclick="closeModal(event)">
         <div class="modal-content">
-            <button onclick="forceClose()" style="position:absolute; right:10px; top:10px; border:none; background:transparent; font-size:24px; cursor:pointer;">&times;</button>
-            
+            <button onclick="forceClose()"
+                style="position:absolute; right:10px; top:10px; border:none; background:transparent; font-size:24px; cursor:pointer;">&times;</button>
+
             <img src="" id="modalImg" class="full-image">
-            
+
             <div style="text-align:left; width:100%;">
                 <h3 id="modalName" style="margin: 5px 0 0 0; color:#1f2937;">Nome</h3>
                 <p id="modalDesc" style="color:#dc2626; font-weight:bold; margin: 5px 0;">Infração</p>
@@ -225,4 +312,5 @@ try {
 
     <script src="../js/infracoes.js"></script>
 </body>
+
 </html>
