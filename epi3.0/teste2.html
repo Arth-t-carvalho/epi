@@ -3,262 +3,175 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Workout Tracker Pro</title>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<title>Dashboard EPI</title>
 
 <style>
-*{
-    margin:0;
-    padding:0;
-    box-sizing:border-box;
-    font-family:'Segoe UI',sans-serif;
+
+/* ===========================
+   RESET & BASE
+=========================== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
 }
 
-body{
-    min-height:100vh;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);
-    color:white;
-    transition:0.3s;
+body {
+    font-family: 'Segoe UI', sans-serif;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
 }
 
-body.light{
-    background:linear-gradient(135deg,#e0eafc,#cfdef3);
-    color:#111;
+/* ===========================
+   CARD
+=========================== */
+
+.card {
+    background: #ffffff;
+    width: 380px;
+    padding: 35px;
+    border-radius: 20px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+    text-align: center;
+    transition: 0.3s ease;
 }
 
-.container{
-    width:95%;
-    max-width:1100px;
-    background:rgba(255,255,255,0.07);
-    backdrop-filter:blur(15px);
-    border-radius:20px;
-    padding:25px;
-    box-shadow:0 20px 40px rgba(0,0,0,0.4);
+.card h2 {
+    margin-bottom: 25px;
+    color: #333;
+    font-weight: 600;
 }
 
-h1{
-    text-align:center;
-    margin-bottom:20px;
+/* ===========================
+   CÍRCULO INDICADOR
+=========================== */
+
+.circle {
+    width: 170px;
+    height: 170px;
+    border-radius: 50%;
+    margin: 0 auto 25px auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    font-weight: bold;
+    color: white;
+    transition: all 0.4s ease;
 }
 
-.top-bar{
-    display:flex;
-    justify-content:space-between;
-    margin-bottom:15px;
+/* CORES */
+
+.critico {
+    background: linear-gradient(135deg, #ff4e50, #b31217);
 }
 
-button{
-    padding:10px 15px;
-    border:none;
-    border-radius:10px;
-    cursor:pointer;
-    font-weight:bold;
-    transition:0.3s;
+.atencao {
+    background: linear-gradient(135deg, #f7971e, #ffd200);
 }
 
-.primary{
-    background:#00c6ff;
-    color:white;
+.ideal {
+    background: linear-gradient(135deg, #11998e, #38ef7d);
 }
 
-.primary:hover{
-    background:#0072ff;
-    transform:scale(1.05);
+/* ===========================
+   STATUS
+=========================== */
+
+.status {
+    font-size: 18px;
+    margin-bottom: 25px;
+    font-weight: 600;
+    transition: 0.3s ease;
 }
 
-.secondary{
-    background:#444;
-    color:white;
+/* ===========================
+   INPUT
+=========================== */
+
+.input-group {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
 }
 
-.form{
-    display:flex;
-    gap:10px;
-    flex-wrap:wrap;
-    margin-bottom:15px;
+input {
+    width: 90px;
+    padding: 10px;
+    border-radius: 10px;
+    border: 1px solid #ccc;
+    text-align: center;
+    font-size: 16px;
 }
 
-input{
-    flex:1;
-    padding:10px;
-    border-radius:10px;
-    border:none;
-    outline:none;
+input:focus {
+    outline: none;
+    border-color: #2c5364;
 }
 
-.card{
-    background:rgba(255,255,255,0.08);
-    padding:15px;
-    border-radius:15px;
-    margin-bottom:10px;
-    transition:0.3s;
+/* RESPONSIVO */
+
+@media(max-width: 420px){
+    .card{
+        width: 90%;
+    }
 }
 
-.card:hover{
-    transform:translateY(-3px);
-}
-
-.meta{
-    margin-top:8px;
-    font-size:14px;
-    color:#00ffae;
-}
-
-canvas{
-    margin-top:20px;
-    background:rgba(255,255,255,0.05);
-    padding:10px;
-    border-radius:15px;
-}
-
-.footer{
-    margin-top:20px;
-    text-align:center;
-    font-size:12px;
-    opacity:0.6;
-}
 </style>
 </head>
 <body>
 
-<div class="container">
-    <div class="top-bar">
-        <h1>🏋 Workout Tracker Pro</h1>
-        <button class="secondary" onclick="toggleTheme()">🌙/☀</button>
+<div class="card">
+    <h2>Conformidade de EPIs</h2>
+
+    <div id="circle" class="circle ideal">85%</div>
+
+    <div id="status" class="status">
+        ✅ Conforme (Ideal)
     </div>
 
-    <div class="form">
-        <input type="text" id="exercise" placeholder="Ex: Supino">
-        <input type="number" id="weight" placeholder="Peso (kg)">
-        <input type="number" id="reps" placeholder="Reps">
-        <button class="primary" onclick="addWorkout()">Adicionar</button>
-    </div>
-
-    <div class="form">
-        <input type="text" id="filter" placeholder="Filtrar exercício..." oninput="renderWorkouts()">
-    </div>
-
-    <div id="workoutList"></div>
-
-    <canvas id="progressChart"></canvas>
-
-    <div class="footer">
-        Arth67 Fitness System v2.0 🚀
+    <div class="input-group">
+        <input type="number" id="inputValor" min="0" max="100" value="85">
     </div>
 </div>
 
 <script>
 
-let workouts = JSON.parse(localStorage.getItem("workouts")) || [];
-let chart;
+const input = document.getElementById("inputValor");
+const circle = document.getElementById("circle");
+const status = document.getElementById("status");
 
-function save(){
-    localStorage.setItem("workouts",JSON.stringify(workouts));
-}
+function atualizarUI(valor) {
 
-function addWorkout(){
-    const exercise = document.getElementById("exercise").value;
-    const weight = parseFloat(document.getElementById("weight").value);
-    const reps = parseInt(document.getElementById("reps").value);
+    if (valor < 0) valor = 0;
+    if (valor > 100) valor = 100;
 
-    if(!exercise || !weight || !reps){
-        alert("Preencha tudo!");
-        return;
-    }
+    circle.textContent = valor + "%";
 
-    const workout={
-        exercise,
-        weight,
-        reps,
-        date:new Date().toLocaleDateString()
-    };
+    circle.classList.remove("critico", "atencao", "ideal");
 
-    workouts.push(workout);
-    save();
-    renderWorkouts();
-    updateChart();
-
-    document.getElementById("exercise").value="";
-    document.getElementById("weight").value="";
-    document.getElementById("reps").value="";
-}
-
-function calculateNextGoal(exercise){
-    const exWorkouts = workouts.filter(w=>w.exercise===exercise);
-    if(exWorkouts.length<2) return "Continue consistente 💪";
-
-    const last = exWorkouts[exWorkouts.length-1];
-    const prev = exWorkouts[exWorkouts.length-2];
-
-    if(last.reps >= prev.reps){
-        return `Meta próxima: +2kg (${last.weight+2}kg)`;
-    }else{
-        return `Meta próxima: +1 rep (${last.reps+1} reps)`;
+    if (valor <= 49) {
+        circle.classList.add("critico");
+        status.textContent = "❌ Não Conforme (Crítico)";
+    } 
+    else if (valor <= 79) {
+        circle.classList.add("atencao");
+        status.textContent = "⚠ Atenção (Regular)";
+    } 
+    else {
+        circle.classList.add("ideal");
+        status.textContent = "✅ Conforme (Ideal)";
     }
 }
 
-function renderWorkouts(){
-    const list = document.getElementById("workoutList");
-    const filter = document.getElementById("filter").value.toLowerCase();
-
-    list.innerHTML="";
-
-    workouts
-    .filter(w=>w.exercise.toLowerCase().includes(filter))
-    .slice()
-    .reverse()
-    .forEach(w=>{
-        list.innerHTML+=`
-        <div class="card">
-            <strong>${w.exercise}</strong>
-            <p>💪 ${w.weight}kg x ${w.reps} reps</p>
-            <small>📅 ${w.date}</small>
-            <div class="meta">${calculateNextGoal(w.exercise)}</div>
-        </div>
-        `;
-    });
-}
-
-function updateChart(){
-    const ctx=document.getElementById("progressChart");
-
-    const grouped={};
-
-    workouts.forEach(w=>{
-        if(!grouped[w.exercise]) grouped[w.exercise]=[];
-        grouped[w.exercise].push(w.weight);
-    });
-
-    const labels=Object.keys(grouped);
-    const data=labels.map(ex=>{
-        return Math.max(...grouped[ex]);
-    });
-
-    if(chart) chart.destroy();
-
-    chart=new Chart(ctx,{
-        type:"bar",
-        data:{
-            labels:labels,
-            datasets:[{
-                label:"PR (Maior Peso)",
-                data:data
-            }]
-        }
-    });
-}
-
-function toggleTheme(){
-    document.body.classList.toggle("light");
-}
-
-renderWorkouts();
-updateChart();
+input.addEventListener("input", () => {
+    atualizarUI(parseInt(input.value));
+});
 
 </script>
+
 </body>
 </html>
