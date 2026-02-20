@@ -268,7 +268,7 @@ $rankingModal = $stmtRankingModal->fetchAll(PDO::FETCH_ASSOC);
 
         /* Ajuste fino nos botões de navegação lateral */
         .nav-btn {
-            background: white;
+            background: #efeff0;
             border: 1px solid var(--border);
             border-radius: 8px;
             width: 36px;
@@ -732,21 +732,45 @@ $rankingModal = $stmtRankingModal->fetchAll(PDO::FETCH_ASSOC);
 
 <body>
 
-    <aside class="sidebar">
-        <div class="brand">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#E30613" stroke-width="3"
-                style="filter: drop-shadow(0 2px 4px rgba(227, 6, 19, 0.3));">
-                <circle cx="12" cy="12" r="10" />
-            </svg>
-            &nbsp; EPI <span>GUARD</span>
-        </div>
-        <nav class="nav-menu">
-            <a class="nav-item active" href="dashboard.php"> Dashboard</a>
-            <a class="nav-item" href="infracoes.php"> Infrações</a>
-            <a class="nav-item" href="controleSala.php"> Controle de Sala</a>
-            <a class="nav-item" href="ocorrencias.php">Ocorrencias</a>
-        </nav>
-    </aside>
+ <aside class="sidebar">
+    <div class="brand">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#E30613" stroke-width="3"
+            style="filter: drop-shadow(0 2px 4px rgba(227, 6, 19, 0.3));">
+            <circle cx="12" cy="12" r="10" />
+        </svg>
+        &nbsp; EPI <span>GUARD</span>
+    </div>
+
+    <nav class="nav-menu">
+
+        <a class="nav-item active" href="dashboard.php">
+            <i data-lucide="layout-dashboard"></i>
+            <span>Dashboard</span>
+        </a>
+
+        <a class="nav-item" href="infracoes.php">
+            <i data-lucide="alert-triangle"></i>
+            <span>Infrações</span>
+        </a>
+
+        <a class="nav-item" href="controleSala.php">
+            <i data-lucide="users"></i>
+            <span>Controle de Sala</span>
+        </a>
+
+        <a class="nav-item" href="ocorrencias.php">
+            <i data-lucide="file-text"></i>
+            <span>Ocorrências</span>
+        </a>
+
+        <a class="nav-item" href="configuracoes.php">
+            <i data-lucide="settings"></i>
+            <span>Configurações</span>
+        </a>
+
+    </nav>
+</aside>
+
 
     <main class="main-content">
 
@@ -853,7 +877,7 @@ $rankingModal = $stmtRankingModal->fetchAll(PDO::FETCH_ASSOC);
                     <span class="section-title">Registro Diário</span>
                 </div>
 
-                <div class="calendar-nav" onclick="openCalendarModal()"
+                <div class="calendar-nav" onclick="toggleCalendar()"
                     style="cursor: pointer; transition: transform 0.2s; display: flex; align-items: center; justify-content: space-between; background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid var(--border);"
                     onmouseover="this.style.transform='scale(1.01)'" onmouseout="this.style.transform='scale(1)'">
 
@@ -869,9 +893,9 @@ $rankingModal = $stmtRankingModal->fetchAll(PDO::FETCH_ASSOC);
                             Setembro 2024
                         </div>
 
-                        <div style="font-size: 10px; color: #E30613; font-weight: 700; margin-top: 6px; display: flex; align-items: center; gap: 4px; cursor: pointer;"
-                            onclick="toggleCalendar()">
-                            <span style="font-size: 8px;">▼</span> Clique para expandir
+                        <div
+                            style="font-size: 10px; color: #E30613; font-weight: 700; margin-top: 6px; display: flex; align-items: center; gap: 4px; cursor: pointer;">
+                            <span style="font-size: 8px;"></span> Clique para expandir
                         </div>
                     </div>
 
@@ -974,6 +998,9 @@ $rankingModal = $stmtRankingModal->fetchAll(PDO::FETCH_ASSOC);
                     <div class="selector-container" id="monthSelector">
                         <div class="selector-display" onclick="toggleMonthList()">
                             <span id="calMonthDisplay">Janeiro</span>
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M7 10l5 5 5-5z" />
+                            </svg>
                         </div>
                         <div class="selector-dropdown" id="monthDropdown">
                         </div>
@@ -1079,6 +1106,10 @@ $rankingModal = $stmtRankingModal->fetchAll(PDO::FETCH_ASSOC);
         </div>
     </div>
 
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        lucide.createIcons();
+    </script>
 
     <script src="../js/dashboard.js"></script>
 </body>

@@ -2,7 +2,8 @@
    VARIÁVEIS GERAIS
    ========================================= */
 :root {
-    --primary: #E30613;           /* Vermelho SENAI */
+    --primary: #E30613;
+    /* Vermelho SENAI */
     --primary-dark: #bf040f;
     --primary-light: rgba(227, 6, 19, 0.1);
     --secondary: #1F2937;
@@ -10,9 +11,12 @@
     --text-muted: #64748B;
 
     /* Fundo e Bordas */
-    --bg-body: #e6e8ec;           /* Fundo mais escuro para contraste */
-    --bg-card: #ebebeb;           /* Fundo dos cards */
-    --border: #CBD5E1;            /* Borda mais nítida */
+    --bg-body: #e6e8ec;
+    /* Fundo mais escuro para contraste */
+    --bg-card: #ebebeb;
+    /* Fundo dos cards */
+    --border: #CBD5E1;
+    /* Borda mais nítida */
 
     /* Status Colors */
     --success: #10B981;
@@ -43,23 +47,49 @@ body {
    ANIMAÇÕES
    ========================================= */
 @keyframes slideInSidebar {
-    from { opacity: 0; transform: translateX(-30px); }
-    to { opacity: 1; transform: translateX(0); }
+    from {
+        opacity: 0;
+        transform: translateX(-30px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
 }
 
 @keyframes fadeInUpContent {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 @keyframes slideInDown {
-    from { opacity: 0; transform: translateY(-10px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
 }
 
 /* =========================================
@@ -138,7 +168,8 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    position: relative; /* Para posicionar o popup do user */
+    position: relative;
+    /* Para posicionar o popup do user */
 }
 
 .page-title h1 {
@@ -265,8 +296,14 @@ body {
     padding-bottom: 8px;
 }
 
-.detail-label { color: var(--text-muted); }
-.detail-value { font-weight: 600; color: var(--secondary); }
+.detail-label {
+    color: var(--text-muted);
+}
+
+.detail-value {
+    font-weight: 600;
+    color: var(--secondary);
+}
 
 .btn-close-card {
     width: 100%;
@@ -300,18 +337,18 @@ body {
     background: var(--bg-card);
     border-radius: var(--radius);
     padding: 24px;
-    
+
     /* Sombra pronunciada e borda sólida */
     box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
     border: 1px solid var(--border);
-    
+
     transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
 }
 
 .card:hover {
     transform: translateY(-4px);
     box-shadow: 0 20px 35px -10px rgba(227, 6, 19, 0.15), 0 10px 20px -5px rgba(0, 0, 0, 0.1);
-    border-color: rgba(227, 6, 19, 0.3);
+    border-color: rgba(255, 0, 17, 0.473);
 }
 
 /* KPI Elements */
@@ -341,24 +378,38 @@ body {
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
-.badge.up { background: #DCFCE7; color: #166534; border: 1px solid #bbf7d0; }
-.badge.down { background: #FEE2E2; color: #991B1B; border: 1px solid #fecaca; }
+.badge.up {
+    background: #DCFCE7;
+    color: #166534;
+    border: 1px solid #bbf7d0;
+}
+
+.badge.down {
+    background: #FEE2E2;
+    color: #991B1B;
+    border: 1px solid #fecaca;
+}
 
 /* Chart Grid Layout */
 .chart-grid {
     display: grid;
-    grid-template-columns: 2fr 1fr 1fr; /* Calendar, Donut, List */
+    grid-template-columns: 2fr 1fr 1fr;
+    /* Calendar, Donut, List */
     gap: 24px;
     min-height: 340px;
     margin-bottom: 25px;
 }
 
 @media (max-width: 1200px) {
-    .chart-grid { grid-template-columns: 1fr 1fr; }
+    .chart-grid {
+        grid-template-columns: 1fr 1fr;
+    }
 }
 
 @media (max-width: 900px) {
-    .chart-grid { grid-template-columns: 1fr; }
+    .chart-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 .section-header {
@@ -386,10 +437,13 @@ body {
     padding: 8px;
     border-radius: 8px;
     border: 1px solid var(--border);
+    box-shadow:
+        0 1px 2px rgba(0, 0, 0, 0.04),
+        0 4px 8px rgba(0, 0, 0, 0.03);
 }
 
 .nav-btn {
-    background: white;
+    background: rgb(236, 225, 225);
     border: 1px solid var(--border);
     border-radius: 6px;
     width: 32px;
@@ -407,9 +461,22 @@ body {
     transform: scale(1.05);
 }
 
-.date-display { text-align: center; }
-.date-day { font-size: 24px; font-weight: 800; color: var(--primary); line-height: 1; }
-.date-month { font-size: 12px; color: var(--text-muted); font-weight: 600; }
+.date-display {
+    text-align: center;
+}
+
+.date-day {
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--primary);
+    line-height: 1;
+}
+
+.date-month {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 600;
+}
 
 .occurrences-list {
     height: 180px;
@@ -439,9 +506,22 @@ body {
     flex-shrink: 0;
 }
 
-.occ-info { flex: 1; }
-.occ-name { display: block; font-size: 13px; font-weight: 600; color: var(--secondary); }
-.occ-desc { display: block; font-size: 11px; color: var(--text-muted); }
+.occ-info {
+    flex: 1;
+}
+
+.occ-name {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--secondary);
+}
+
+.occ-desc {
+    display: block;
+    font-size: 11px;
+    color: var(--text-muted);
+}
 
 .occ-time {
     font-size: 11px;
@@ -462,7 +542,9 @@ body {
     border-bottom: 1px solid var(--border);
 }
 
-.list-item:last-child { border-bottom: none; }
+.list-item:last-child {
+    border-bottom: none;
+}
 
 .progress-bar {
     height: 8px;
@@ -518,7 +600,9 @@ body {
     flex-direction: column;
 }
 
-.modal-overlay.open .modal-container { transform: scale(1); }
+.modal-overlay.open .modal-container {
+    transform: scale(1);
+}
 
 .modal-header {
     display: flex;
@@ -529,8 +613,16 @@ body {
     padding-bottom: 15px;
 }
 
-.modal-title h2 { font-size: 1.25rem; color: #1F2937; margin: 0; }
-.modal-title span { color: #E30613; font-weight: 700; }
+.modal-title h2 {
+    font-size: 1.25rem;
+    color: #1F2937;
+    margin: 0;
+}
+
+.modal-title span {
+    color: #E30613;
+    font-weight: 700;
+}
 
 .btn-close-modal {
     background: none;
@@ -542,7 +634,9 @@ body {
     transition: color 0.2s;
 }
 
-.btn-close-modal:hover { color: #E30613; }
+.btn-close-modal:hover {
+    color: #E30613;
+}
 
 /* TABELA DENTRO DO MODAL */
 .table-wrapper {
@@ -574,7 +668,9 @@ body {
     color: #334155;
 }
 
-.custom-table tr:hover { background-color: #F8FAFC; }
+.custom-table tr:hover {
+    background-color: #F8FAFC;
+}
 
 .status-badge {
     padding: 4px 10px;
@@ -582,8 +678,16 @@ body {
     font-size: 0.75rem;
     font-weight: 600;
 }
-.status-pendente { background: #FEF2F2; color: #DC2626; }
-.status-resolvido { background: #F0FDF4; color: #16A34A; }
+
+.status-pendente {
+    background: #FEF2F2;
+    color: #DC2626;
+}
+
+.status-resolvido {
+    background: #F0FDF4;
+    color: #16A34A;
+}
 
 .btn-modal-action {
     padding: 8px 16px;
@@ -596,7 +700,9 @@ body {
     transition: background 0.2s;
 }
 
-.btn-modal-action:hover { background: #E30613; }
+.btn-modal-action:hover {
+    background: #E30613;
+}
 
 /* =========================================
    POPUP DO GRÁFICO (EFEITO VIDRO)
@@ -623,7 +729,7 @@ body {
     width: 85%;
     max-height: 90%;
     border-radius: 10px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
     border: 1px solid #e2e8f0;
     padding: 15px;
     display: flex;
@@ -675,8 +781,14 @@ body {
     scrollbar-width: thin;
 }
 
-.popup-list::-webkit-scrollbar { width: 4px; }
-.popup-list::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 4px; }
+.popup-list::-webkit-scrollbar {
+    width: 4px;
+}
+
+.popup-list::-webkit-scrollbar-thumb {
+    background-color: #cbd5e1;
+    border-radius: 4px;
+}
 
 .popup-list li {
     font-size: 13px;

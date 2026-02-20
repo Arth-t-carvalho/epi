@@ -20,18 +20,18 @@ function openModalPHP(imgUrl, nome, epi, horaTexto, dataCompleta) {
     }
 
     // 1. Preenche os dados visuais
-    if(modalImg) modalImg.src = imgUrl;
-    if(modalName) modalName.innerText = nome;
-    if(modalDesc) modalDesc.innerText = "Falta de: " + epi;
-    if(modalTime) modalTime.innerText = "Horário: " + horaTexto;
-    
+    if (modalImg) modalImg.src = imgUrl;
+    if (modalName) modalName.innerText = nome;
+    if (modalDesc) modalDesc.innerText = "Falta de: " + epi;
+    if (modalTime) modalTime.innerText = "Horário: " + horaTexto;
+
     // 2. Configura o botão vermelho
     if (btnAssinar) {
         // Remove eventos antigos clonando o botão (opcional, mas evita cliques duplos)
         const novoBotao = btnAssinar.cloneNode(true);
         btnAssinar.parentNode.replaceChild(novoBotao, btnAssinar);
-        
-        novoBotao.onclick = function() {
+
+        novoBotao.onclick = function () {
             const params = new URLSearchParams({
                 aluno: nome,
                 epi: epi,
@@ -71,3 +71,33 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 });
+
+function openModalPHP(src, nome, epi, hora, dataCompleta) {
+    const modal = document.getElementById('imageModal');
+    const modalImg = document.getElementById('modalImg');
+    const modalName = document.getElementById('modalName');
+    const modalDesc = document.getElementById('modalDesc');
+    const modalTime = document.getElementById('modalTime');
+
+    // Define os valores no modal
+    modalImg.src = src;
+    modalName.innerText = nome;
+    modalDesc.innerText = "Infração: " + epi;
+    modalTime.innerText = "Horário: " + hora + " | Data: " + dataCompleta;
+
+    // Exibe o modal
+    modal.classList.add('active');
+}
+
+function closeModal(event) {
+    if (event.target.id === 'imageModal') {
+        forceClose();
+    }
+}
+
+function forceClose() {
+    const modal = document.getElementById('imageModal');
+    modal.classList.remove('active');
+    // Limpa a imagem para não aparecer a anterior ao abrir um novo card
+    document.getElementById('modalImg').src = "";
+}

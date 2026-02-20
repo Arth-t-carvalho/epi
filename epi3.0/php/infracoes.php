@@ -1,35 +1,32 @@
 <?php
 require_once __DIR__ . '/../config/database.php';
-// require_once __DIR__ . '/../config/auth.php'; 
 
 // ==========================================
-// 1. LÓGICA DE FILTROS (Mantida)
+// 1. LÓGICA DE FILTROS (BACK-END)
 // ==========================================
-// Captura 'periodo' (usado pelo form interno) ou 'filtro' (vindo do dashboard)
 $filtroData = $_GET['periodo'] ?? ($_GET['filtro'] ?? 'hoje');
 $filtroEpi = isset($_GET['epi']) ? $_GET['epi'] : '';
 
 try {
-    // Lista de EPIs para o select
     $stmtEpis = $pdo->query("SELECT id, nome FROM epis ORDER BY nome ASC");
     $listaEpis = $stmtEpis->fetchAll(PDO::FETCH_ASSOC);
 
-    // Query Principal
     $sql = "
         SELECT 
-            o.id, o.data_hora,
+            o.id, 
+            o.data_hora,
             a.nome AS aluno_nome,
             c.nome AS aluno_curso,
             e.nome AS epi_nome,
-            ev.imagem AS foto_caminho
+            ev.imagem AS foto_caminho -- Buscando o campo 'imagem' da tabela 'evidencias'
         FROM ocorrencias o
         JOIN alunos a ON a.id = o.aluno_id
         LEFT JOIN cursos c ON c.id = a.curso_id
         JOIN epis e ON e.id = o.epi_id
-        LEFT JOIN evidencias ev ON ev.ocorrencia_id = o.id
+        /* Relacionamento com a tabela evidencias pelo ocorrencia_id */
+        LEFT JOIN evidencias ev ON ev.ocorrencia_id = o.id 
         WHERE 1=1
     ";
-
     if ($filtroData == 'hoje' || $filtroData == 'dia') {
         $sql .= " AND DATE(o.data_hora) = CURDATE()";
     } elseif ($filtroData == '7dias' || $filtroData == 'semana') {
@@ -65,9 +62,8 @@ try {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EPI Guard | Infrações</title>
     <link rel="stylesheet" href="../css/infracoes.css">
-
     <style>
-        /* CSS ESPECÍFICO PARA O MODAL E BOTÃO */
+        /* MANTIDO SEU CSS ORIGINAL */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -76,7 +72,6 @@ try {
             height: 100%;
             background: rgba(0, 0, 0, 0.85);
             display: none;
-            /* JS muda para flex */
             z-index: 10000;
             justify-content: center;
             align-items: center;
@@ -125,7 +120,6 @@ try {
             background-color: #B91C1C;
         }
 
-        /* Ajustes do Card */
         .grid-cards {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
@@ -186,7 +180,6 @@ try {
             margin-top: 4px;
         }
 
-        /* CSS BÁSICO DO HEADER DE FILTRO */
         .header-controls {
             display: flex;
             gap: 15px;
@@ -207,8 +200,7 @@ try {
 <body>
     <aside class="sidebar">
         <div class="brand">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#E30613" stroke-width="3"
-                style="filter: drop-shadow(0 2px 4px rgba(227, 6, 19, 0.3));">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#E30613" stroke-width="3">
                 <circle cx="12" cy="12" r="10" />
             </svg>
             &nbsp; EPI <span>GUARD</span>
@@ -228,7 +220,6 @@ try {
                     <h1>Painel Geral</h1>
                     <p>Monitoramento de Segurança</p>
                 </div>
-
                 <form method="GET" class="header-controls">
                     <select name="periodo" class="filter-select" onchange="this.form.submit()">
                         <option value="hoje" <?php echo ($filtroData == 'hoje' || $filtroData == 'dia') ? 'selected' : ''; ?>>Hoje</option>
@@ -255,36 +246,34 @@ try {
                     <p style="padding:20px; color:#666;">Nenhuma infração encontrada.</p>
                 <?php else: ?>
                     <?php foreach ($infracoes as $item):
-                        // Preparação de Dados Segura
+                        // BACK-END: TRATAMENTO DE IMAGEM
+                        $nomeArquivo = $item['foto_caminho'];
+                        $diretorioUploads = "../uploads/";
+                        $caminhoFisico = __DIR__ . "/../uploads/" . $nomeArquivo;
+
+                        if (!empty($nomeArquivo) && file_exists($caminhoFisico)) {
+                            $imgSrc = $diretorioUploads . $nomeArquivo;
+                        } else {
+                            $imgSrc = "https://via.placeholder.com/400x300?text=Sem+Imagem";
+                        }
+
                         $nomeSafe = htmlspecialchars($item['aluno_nome'] ?? 'Desconhecido', ENT_QUOTES);
                         $epiSafe = htmlspecialchars($item['epi_nome'] ?? 'EPI', ENT_QUOTES);
                         $setorSafe = htmlspecialchars($item['aluno_curso'] ?? 'Geral', ENT_QUOTES);
-
                         $dataObj = new DateTime($item['data_hora']);
                         $horaF = $dataObj->format('H:i');
-                        $dataBanco = $item['data_hora']; // Data completa Y-m-d H:i:s
-                
-                        $imgSrc = !empty($item['foto_caminho']) ? "../uploads/" . $item['foto_caminho'] : "https://via.placeholder.com/400x300?text=Sem+Imagem";
+                        $dataF = $dataObj->format('d/m/Y');
                         ?>
 
-                        <div class="violation-card" onclick="openModalPHP(
-                            '<?php echo $imgSrc; ?>', 
-                            '<?php echo $nomeSafe; ?>', 
-                            '<?php echo $epiSafe; ?>', 
-                            '<?php echo $horaF; ?>',
-                            '<?php echo $dataBanco; ?>'
-                         )">
-
+                        <div class="violation-card"
+                            onclick="openModalPHP('<?php echo $imgSrc; ?>', '<?php echo $nomeSafe; ?>', '<?php echo $epiSafe; ?>', '<?php echo $horaF; ?>', '<?php echo $dataF; ?>')">
                             <div class="card-image-wrapper">
-                                <img src="<?php echo $imgSrc; ?>" class="card-image">
+                                <img src="<?php echo $imgSrc; ?>" class="card-image" loading="lazy">
                             </div>
-
                             <div class="card-content">
                                 <span class="violation-tag"><?php echo $epiSafe; ?></span>
                                 <span class="infrator-name"><?php echo $nomeSafe; ?></span>
-                                <div class="timestamp">
-                                    <?php echo $horaF; ?> • <?php echo $setorSafe; ?>
-                                </div>
+                                <div class="timestamp"><?php echo $horaF; ?> • <?php echo $setorSafe; ?></div>
                             </div>
                         </div>
                     <?php endforeach; ?>
@@ -294,23 +283,47 @@ try {
     </main>
 
     <div class="modal-overlay" id="imageModal" onclick="closeModal(event)">
-        <div class="modal-content">
+        <div class="modal-content" onclick="event.stopPropagation()">
             <button onclick="forceClose()"
                 style="position:absolute; right:10px; top:10px; border:none; background:transparent; font-size:24px; cursor:pointer;">&times;</button>
-
             <img src="" id="modalImg" class="full-image">
-
             <div style="text-align:left; width:100%;">
                 <h3 id="modalName" style="margin: 5px 0 0 0; color:#1f2937;">Nome</h3>
                 <p id="modalDesc" style="color:#dc2626; font-weight:bold; margin: 5px 0;">Infração</p>
                 <p id="modalTime" style="color:#666; font-size:14px; margin:0;">Horário</p>
             </div>
-
             <button id="btnAssinar" class="btn-assinar">Assinar Ocorrência</button>
         </div>
     </div>
 
-    <script src="../js/infracoes.js"></script>
+    <script>
+        function openModalPHP(src, nome, epi, hora, dataCompleta) {
+            const modal = document.getElementById('imageModal');
+            const modalImg = document.getElementById('modalImg');
+            const modalName = document.getElementById('modalName');
+            const modalDesc = document.getElementById('modalDesc');
+            const modalTime = document.getElementById('modalTime');
+
+            modalImg.src = src;
+            modalName.innerText = nome;
+            modalDesc.innerText = "Infração: " + epi;
+            modalTime.innerText = "Horário: " + hora + " | Data: " + dataCompleta;
+
+            modal.classList.add('active');
+        }
+
+        function closeModal(event) {
+            if (event.target.id === 'imageModal') {
+                forceClose();
+            }
+        }
+
+        function forceClose() {
+            const modal = document.getElementById('imageModal');
+            modal.classList.remove('active');
+            document.getElementById('modalImg').src = "";
+        }
+    </script>
 </body>
 
 </html>
