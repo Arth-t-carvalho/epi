@@ -732,44 +732,45 @@ $rankingModal = $stmtRankingModal->fetchAll(PDO::FETCH_ASSOC);
 
 <body>
 
- <aside class="sidebar">
-    <div class="brand">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#E30613" stroke-width="3"
-            style="filter: drop-shadow(0 2px 4px rgba(227, 6, 19, 0.3));">
-            <circle cx="12" cy="12" r="10" />
-        </svg>
-        &nbsp; EPI <span>GUARD</span>
-    </div>
+    <aside class="sidebar">
+        <div class="brand">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#E30613" stroke-width="3"
+                style="filter: drop-shadow(0 2px 4px rgba(227, 6, 19, 0.3));">
+                <circle cx="12" cy="12" r="10" />
+            </svg>
 
-    <nav class="nav-menu">
+            &nbsp; EPI <span>GUARD</span>
+        </div>
 
-        <a class="nav-item active" href="dashboard.php">
-            <i data-lucide="layout-dashboard"></i>
-            <span>Dashboard</span>
-        </a>
+        <nav class="nav-menu">
 
-        <a class="nav-item" href="infracoes.php">
-            <i data-lucide="alert-triangle"></i>
-            <span>Infrações</span>
-        </a>
+            <a class="nav-item active" href="dashboard.php">
+                <i data-lucide="layout-dashboard"></i>
+                <span>Dashboard</span>
+            </a>
 
-        <a class="nav-item" href="controleSala.php">
-            <i data-lucide="users"></i>
-            <span>Controle de Sala</span>
-        </a>
+            <a class="nav-item" href="infracoes.php">
+                <i data-lucide="alert-triangle"></i>
+                <span>Infrações</span>
+            </a>
 
-        <a class="nav-item" href="ocorrencias.php">
-            <i data-lucide="file-text"></i>
-            <span>Ocorrências</span>
-        </a>
+            <a class="nav-item" href="controleSala.php">
+                <i data-lucide="users"></i>
+                <span>Controle de Sala</span>
+            </a>
 
-        <a class="nav-item" href="configuracoes.php">
-            <i data-lucide="settings"></i>
-            <span>Configurações</span>
-        </a>
+            <a class="nav-item" href="ocorrencias.php">
+                <i data-lucide="file-text"></i>
+                <span>Ocorrências</span>
+            </a>
 
-    </nav>
-</aside>
+            <a class="nav-item" href="configuracoes.php">
+                <i data-lucide="settings"></i>
+                <span>Configurações</span>
+            </a>
+
+        </nav>
+    </aside>
 
 
     <main class="main-content">
@@ -1105,12 +1106,12 @@ $rankingModal = $stmtRankingModal->fetchAll(PDO::FETCH_ASSOC);
             </div>
         </div>
     </div>
+    <div id="notification-container"></div>
 
     <script src="https://unpkg.com/lucide@latest"></script>
     <script>
         lucide.createIcons();
     </script>
-
     <script src="../js/dashboard.js"></script>
 </body>
 

@@ -7,6 +7,11 @@
     <title>EPI GUARD | Configurações</title>
     <script src="https://unpkg.com/lucide@latest"></script>
     <link rel="stylesheet" href="../css/configuracoes.css">
+    <link rel="stylesheet" href="../css/dashboard.css">
+    
+    <style>
+   
+    </style>
 </head>
 
 <body>
@@ -179,7 +184,7 @@
 
                     <div class="control-row">
                         <div class="control-label">
-                            <span>Notificar Gestor</span>
+                            <span>Notificação</span>
                             <small>Enviar e-mail se infração crítica</small>
                         </div>
                         <label class="switch">

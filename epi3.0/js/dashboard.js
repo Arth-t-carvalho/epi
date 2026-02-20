@@ -615,3 +615,81 @@ function closeAlunosModal() {
         modal.style.display = 'none';
     }
 }
+
+// parte das notifcaçoes:
+// =========================================================
+// SISTEMA DE NOTIFICAÇÕES EM TEMPO REAL
+// =========================================================
+
+// 1. Variável para o sistema "lembrar" qual foi o último ID que ele já mostrou na tela
+let ultimoIdNotificacao = 0;
+
+// 2. Função Visual: Responsável por desenhar o card bonitinho no canto da tela
+function mostrarNotificacao(aluno, epi) {
+    const container = document.getElementById('notification-container');
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+
+    // Pega a hora atual do PC para mostrar no card
+    const agora = new Date();
+    const horario = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+    // Monta o HTML do cardzinho
+    toast.innerHTML = `
+        <div class="toast-icon">
+            <i data-lucide="alert-triangle"></i>
+        </div>
+        <div class="toast-content">
+            <span class="toast-title">Infração Detectada</span>
+            <span class="toast-message">${aluno} sem ${epi}</span>
+            <span class="toast-time">${horario}</span>
+        </div>
+    `;
+
+    // Joga o card na tela
+    container.appendChild(toast);
+    lucide.createIcons({ root: toast }); // Carrega o ícone do triângulo de alerta
+
+    // Conta 5 segundos e deleta o card da tela automaticamente
+    setTimeout(() => {
+        toast.classList.add('removing');
+        toast.addEventListener('animationend', () => toast.remove());
+    }, 5000);
+}
+
+// 3. O "Motor": Fica indo no banco de dados ver se tem infração nova
+function verificarNovasOcorrencias() {
+    // Chama aquele arquivo PHP passando o último ID que o sistema lembra
+    fetch(`../php/check_notificacoes.php?last_id=${ultimoIdNotificacao}`)
+        .then(response => response.json())
+        .then(data => {
+            // Se for a primeira vez que a página abriu, ele só anota o ID mais alto que já existe no banco (ex: 1241) e para.
+            if (data.status === 'init') {
+                ultimoIdNotificacao = data.last_id;
+                return;
+            }
+
+            // Se achou infrações novas no banco (IDs 1242, 1243...)...
+            if (data.status === 'success' && data.dados.length > 0) {
+                // Para cada infração nova, ele faz isso:
+                data.dados.forEach(ocorrencia => {
+                    // Chama a função visual lá de cima pra desenhar o card
+                    mostrarNotificacao(ocorrencia.aluno, ocorrencia.epi_nome);
+                    
+                    // Atualiza a memória com o ID novo para não ficar repetindo
+                    if (ocorrencia.id > ultimoIdNotificacao) {
+                        ultimoIdNotificacao = ocorrencia.id;
+                    }
+                });
+            }
+        })
+        .catch(error => console.error("Erro ao checar o banco:", error));
+}
+
+// 4. LIGA O MOTOR! Faz a função rodar repetidamente a cada 5000 milissegundos (5 segundos)
+setInterval(verificarNovasOcorrencias, 5000);
+
+// Já dá a primeira rodada logo que você atualiza a página
+verificarNovasOcorrencias();

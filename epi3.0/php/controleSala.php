@@ -4,7 +4,8 @@ require_once __DIR__ . '/../config/database.php';
 // require_once __DIR__ . '/../config/auth.php';
 
 // Simulação de sessão para teste (remova se já tiver login real)
-if (session_status() === PHP_SESSION_NONE) session_start();
+if (session_status() === PHP_SESSION_NONE)
+    session_start();
 $nomeUsuario = $_SESSION['usuario_nome'] ?? 'Instrutor';
 $cargoUsuario = $_SESSION['usuario_cargo'] ?? 'Supervisor';
 $iniciais = strtoupper(substr($nomeUsuario, 0, 2));
@@ -18,44 +19,48 @@ $iniciais = strtoupper(substr($nomeUsuario, 0, 2));
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EPI Guard | Controle de Sala</title>
     <link rel="stylesheet" href="../css/controleSala.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+
     
-    <style>
-        /* CSS Rápido para garantir funcionamento básico do modal e layout */
-        .modal-overlay {
-            display: none; /* Oculto por padrão */
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.5); z-index: 1000;
-            justify-content: center; align-items: center;
-        }
-        .modal-content {
-            background: white; width: 90%; max-width: 500px;
-            border-radius: 12px; overflow: hidden;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-        }
-        .modal-header {
-            padding: 15px 20px; border-bottom: 1px solid #eee;
-            display: flex; justify-content: space-between; align-items: center;
-            background: #f9fafb;
-        }
-        .close-btn { background: none; border: none; font-size: 24px; cursor: pointer; color: #666; }
-        .instructor-card { display: none; position: absolute; right: 20px; top: 70px; background: white; border: 1px solid #ddd; padding: 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); z-index: 100; }
-    </style>
 </head>
 
 <body>
-
     <aside class="sidebar">
         <div class="brand">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#E30613" stroke-width="3">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#E30613" stroke-width="3"
+                style="filter: drop-shadow(0 2px 4px rgba(227, 6, 19, 0.3));">
                 <circle cx="12" cy="12" r="10" />
             </svg>
             &nbsp; EPI <span>GUARD</span>
         </div>
+
         <nav class="nav-menu">
-            <a class="nav-item" href="dashboard.php">Dashboard</a>
-            <a class="nav-item" href="infracoes.php">Infrações</a>
-            <a class="nav-item active" href="controleSala.php">Controle de Sala</a>
-            <a class="nav-item" href="ocorrencias.php">Ocorrências</a>
+
+            <a class="nav-item " href="dashboard.php">
+                <i data-lucide="layout-dashboard"></i>
+                <span>Dashboard</span>
+            </a>
+
+            <a class="nav-item" href="infracoes.php">
+                <i data-lucide="alert-triangle"></i>
+                <span>Infrações</span>
+            </a>
+
+            <a class="nav-item active" href="controleSala.php">
+                <i data-lucide="users"></i>
+                <span>Controle de Sala</span>
+            </a>
+
+            <a class="nav-item" href="ocorrencias.php">
+                <i data-lucide="file-text"></i>
+                <span>Ocorrências</span>
+            </a>
+
+            <a class="nav-item" href="configuracoes.php">
+                <i data-lucide="settings"></i>
+                <span>Configurações</span>
+            </a>
+
         </nav>
     </aside>
 
@@ -87,7 +92,8 @@ $iniciais = strtoupper(substr($nomeUsuario, 0, 2));
                     <span class="detail-value" style="color:green; font-weight:bold;">Online</span>
                 </div>
                 <hr style="margin: 15px 0; border:0; border-top:1px solid #eee;">
-                <button class="btn-close-card" style="width:100%; padding:8px;" onclick="location.href='../php/logout.php'">Sair</button>
+                <button class="btn-close-card" style="width:100%; padding:8px;"
+                    onclick="location.href='../php/logout.php'">Sair</button>
             </div>
         </header>
 
@@ -130,14 +136,18 @@ $iniciais = strtoupper(substr($nomeUsuario, 0, 2));
             <div style="padding: 20px;">
                 <h4 style="margin-bottom: 10px; color: #333;">Checklist de EPIs:</h4>
                 <div id="modalEpiList" class="epi-list">
-                    </div>
+                </div>
             </div>
 
             <div id="modalFooterActions" style="padding: 20px; border-top: 1px solid #eee;">
-                </div>
+            </div>
         </div>
     </div>
 
     <script src="../js/controleSala.js"></script>
+      <script>
+        lucide.createIcons();
+    </script>
 </body>
+
 </html>

@@ -1,7 +1,7 @@
-<?php 
+<?php
 // Correção solicitada: auth.php (caminho relativo assumindo que está na pasta /pages/)
 require_once __DIR__ . '/../config/database.php';
-require_once __DIR__ . '/../config/auth.php';?>
+require_once __DIR__ . '/../config/auth.php'; ?>
 
 <!DOCTYPE html>
 <html lang="pt-br">
@@ -11,6 +11,8 @@ require_once __DIR__ . '/../config/auth.php';?>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EPI Guard | Nova Ocorrência</title>
     <link rel="stylesheet" href="../css/Ocorrencia.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+
 </head>
 
 <body>
@@ -23,11 +25,34 @@ require_once __DIR__ . '/../config/auth.php';?>
             </svg>
             &nbsp; EPI <span>GUARD</span>
         </div>
+
         <nav class="nav-menu">
-            <a class="nav-item" href="dashboard.php"> Dashboard</a>
-            <a class="nav-item" href="infracoes.php"> Infrações</a>
-            <a class="nav-item" href="controleSala.php"> Controle de Sala</a>
-            <a class="nav-item active" href="ocorrencias.php">Ocorrencias</a>
+
+            <a class="nav-item " href="dashboard.php">
+                <i data-lucide="layout-dashboard"></i>
+                <span>Dashboard</span>
+            </a>
+
+            <a class="nav-item " href="infracoes.php">
+                <i data-lucide="alert-triangle"></i>
+                <span>Infrações</span>
+            </a>
+
+            <a class="nav-item" href="controleSala.php">
+                <i data-lucide="users"></i>
+                <span>Controle de Sala</span>
+            </a>
+
+            <a class="nav-item active" href="ocorrencias.php">
+                <i data-lucide="file-text"></i>
+                <span>Ocorrências</span>
+            </a>
+
+            <a class="nav-item" href="configuracoes.php">
+                <i data-lucide="settings"></i>
+                <span>Configurações</span>
+            </a>
+
         </nav>
     </aside>
 
@@ -152,7 +177,10 @@ require_once __DIR__ . '/../config/auth.php';?>
 
     </main>
     <script src="../js/ocorrencias.js" defer></script>
-   
+    <script>
+        lucide.createIcons();
+    </script>
+
 </body>
 
 </html>

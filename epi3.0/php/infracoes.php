@@ -62,6 +62,9 @@ try {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EPI Guard | Infrações</title>
     <link rel="stylesheet" href="../css/infracoes.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         /* MANTIDO SEU CSS ORIGINAL */
         .modal-overlay {
@@ -198,21 +201,47 @@ try {
 </head>
 
 <body>
+    <script src="https://unpkg.com/lucide@latest">
+        lucide.createIcons();
+    </script>
     <aside class="sidebar">
         <div class="brand">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#E30613" stroke-width="3">
-                <circle cx="12" cy="12" r="10" />
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#E30613" stroke-width="3"
+                style="filter: drop-shadow(0 2px 4px rgba(227, 6, 19, 0.3));">
+                <circle cx="12" cy="12" r="10"/>
             </svg>
             &nbsp; EPI <span>GUARD</span>
         </div>
+
         <nav class="nav-menu">
-            <a class="nav-item" href="dashboard.php"> Dashboard</a>
-            <a class="nav-item active" href="infracoes.php"> Infrações</a>
-            <a class="nav-item" href="controleSala.php"> Controle de Sala</a>
-            <a class="nav-item" href="ocorrencias.php">Ocorrencias</a>
+
+            <a class="nav-item " href="dashboard.php">
+                <i data-lucide="layout-dashboard"></i>
+                <span>Dashboard</span>
+            </a>
+
+            <a class="nav-item active" href="infracoes.php">
+                <i data-lucide="alert-triangle"></i>
+                <span>Infrações</span>
+            </a>
+
+            <a class="nav-item" href="controleSala.php">
+                <i data-lucide="users"></i>
+                <span>Controle de Sala</span>
+            </a>
+
+            <a class="nav-item" href="ocorrencias.php">
+                <i data-lucide="file-text"></i>
+                <span>Ocorrências</span>
+            </a>
+
+            <a class="nav-item" href="configuracoes.php">
+                <i data-lucide="settings"></i>
+                <span>Configurações</span>
+            </a>
+
         </nav>
     </aside>
-
     <main class="main-content">
         <header class="header">
             <div>
@@ -323,6 +352,9 @@ try {
             modal.classList.remove('active');
             document.getElementById('modalImg').src = "";
         }
+    </script>
+    <script>
+        lucide.createIcons();
     </script>
 </body>
 
