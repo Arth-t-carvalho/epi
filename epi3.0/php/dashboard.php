@@ -1106,8 +1106,9 @@ $rankingModal = $stmtRankingModal->fetchAll(PDO::FETCH_ASSOC);
             </div>
         </div>
     </div>
-    <div id="notification-container"></div>
 
+    <div id="notification-container"></div>
+    
     <script src="https://unpkg.com/lucide@latest"></script>
     <script>
         lucide.createIcons();

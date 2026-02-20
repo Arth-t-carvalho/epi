@@ -622,74 +622,106 @@ function closeAlunosModal() {
 // =========================================================
 
 // 1. Variável para o sistema "lembrar" qual foi o último ID que ele já mostrou na tela
+// =========================================================
+// SISTEMA DE NOTIFICAÇÕES EM TEMPO REAL
+// =========================================================
+
 let ultimoIdNotificacao = 0;
 
-// 2. Função Visual: Responsável por desenhar o card bonitinho no canto da tela
+// 1. Função Visual: Cria o card com as classes do seu CSS
 function mostrarNotificacao(aluno, epi) {
     const container = document.getElementById('notification-container');
     if (!container) return;
 
-    const toast = document.createElement('div');
-    toast.className = 'toast';
-
-    // Pega a hora atual do PC para mostrar no card
     const agora = new Date();
     const horario = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
-    // Monta o HTML do cardzinho
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+
     toast.innerHTML = `
         <div class="toast-icon">
             <i data-lucide="alert-triangle"></i>
         </div>
         <div class="toast-content">
-            <span class="toast-title">Infração Detectada</span>
-            <span class="toast-message">${aluno} sem ${epi}</span>
+            <div class="toast-title">Infração Detectada</div>
+            <div class="toast-message"><b>${aluno}</b> • Sem ${epi}</div>
             <span class="toast-time">${horario}</span>
         </div>
     `;
 
-    // Joga o card na tela
     container.appendChild(toast);
-    lucide.createIcons({ root: toast }); // Carrega o ícone do triângulo de alerta
 
-    // Conta 5 segundos e deleta o card da tela automaticamente
-    setTimeout(() => {
-        toast.classList.add('removing');
-        toast.addEventListener('animationend', () => toast.remove());
-    }, 5000);
+    // Carrega o ícone do Lucide (se você estiver usando a biblioteca)
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons({ root: toast });
+    }
+
+    // Atualiza o tamanho para o efeito cascata
+    updateToastWidths();
+
+    // Remove automaticamente após 5 segundos
+    setTimeout(() => { removeToast(toast); }, 5000);
 }
 
-// 3. O "Motor": Fica indo no banco de dados ver se tem infração nova
+// 2. Função Auxiliar: Faz o card sair suavemente e organiza os restantes
+function removeToast(toastElement) {
+    if (toastElement.classList.contains('removing')) return;
+    toastElement.classList.add('removing'); // Ativa a animação do seu CSS
+
+    setTimeout(() => {
+        if (toastElement.parentElement) {
+            toastElement.parentElement.removeChild(toastElement);
+            updateToastWidths();
+        }
+    }, 350); // 350ms é o tempo da animação (0.3s)
+}
+
+// 3. Função Auxiliar: Faz o efeito empilhado (cards de baixo ficam menores)
+function updateToastWidths() {
+    const container = document.getElementById('notification-container');
+    const toasts = Array.from(container.querySelectorAll('.toast:not(.removing)'));
+    if (toasts.length === 0) return;
+
+    const midIndex = (toasts.length - 1) / 2;
+
+    toasts.forEach((toast, index) => {
+        const distanceFromCenter = Math.abs(index - midIndex);
+        const percentage = 100 - (distanceFromCenter * 5); // Diminui 5% de largura
+        toast.style.width = `${Math.max(percentage, 75)}%`; // Nunca fica menor que 75%
+    });
+}
+
+// 4. O Motor (Fetch no PHP) - Mantivemos a sua lógica que já funcionava!
 function verificarNovasOcorrencias() {
-    // Chama aquele arquivo PHP passando o último ID que o sistema lembra
-    fetch(`../php/check_notificacoes.php?last_id=${ultimoIdNotificacao}`)
-        .then(response => response.json())
+    fetch(`../php/check_notificacoes.php?last_id=${ultimoIdNotificacao}`, {
+        headers: { "X-Requested-With": "XMLHttpRequest" }
+    })
+        .then(res => res.json())
         .then(data => {
-            // Se for a primeira vez que a página abriu, ele só anota o ID mais alto que já existe no banco (ex: 1241) e para.
+            console.log("RETORNO COMPLETO:", data);
+
             if (data.status === 'init') {
                 ultimoIdNotificacao = data.last_id;
                 return;
             }
 
-            // Se achou infrações novas no banco (IDs 1242, 1243...)...
             if (data.status === 'success' && data.dados.length > 0) {
-                // Para cada infração nova, ele faz isso:
+
                 data.dados.forEach(ocorrencia => {
-                    // Chama a função visual lá de cima pra desenhar o card
-                    mostrarNotificacao(ocorrencia.aluno, ocorrencia.epi_nome);
-                    
-                    // Atualiza a memória com o ID novo para não ficar repetindo
-                    if (ocorrencia.id > ultimoIdNotificacao) {
-                        ultimoIdNotificacao = ocorrencia.id;
-                    }
+
+                    mostrarNotificacao(
+                        ocorrencia.aluno,
+                        ocorrencia.epi_nome
+                    );
+
+                    ultimoIdNotificacao = ocorrencia.id;
                 });
             }
+
         })
-        .catch(error => console.error("Erro ao checar o banco:", error));
+        .catch(err => console.error(err));
 }
 
-// 4. LIGA O MOTOR! Faz a função rodar repetidamente a cada 5000 milissegundos (5 segundos)
 setInterval(verificarNovasOcorrencias, 5000);
-
-// Já dá a primeira rodada logo que você atualiza a página
-verificarNovasOcorrencias();
+verificarNovasOcorrencias(); 

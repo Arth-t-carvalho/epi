@@ -1,5 +1,3 @@
-<!-- esse e o arquivo de conexão com o banco de dados erros que envolvem conexão com o banco deve ser checado aqui  -->
-
 <?php
 // config/database.php
 
