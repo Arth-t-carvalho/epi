@@ -21,7 +21,7 @@ $iniciais = strtoupper(substr($nomeUsuario, 0, 2));
     <link rel="stylesheet" href="../css/controleSala.css">
     <script src="https://unpkg.com/lucide@latest"></script>
 
-    
+
 </head>
 
 <body>
@@ -59,6 +59,10 @@ $iniciais = strtoupper(substr($nomeUsuario, 0, 2));
             <a class="nav-item" href="configuracoes.php">
                 <i data-lucide="settings"></i>
                 <span>Configurações</span>
+            </a>
+              <a class="nav-item" href="monitoramento.php">
+                <i data-lucide="monitor"></i>
+                <span>Monitoramento</span>
             </a>
 
         </nav>
@@ -105,12 +109,12 @@ $iniciais = strtoupper(substr($nomeUsuario, 0, 2));
                         <span class="search-icon">🔍</span>
                         <input type="text" class="search-input" id="searchInput" placeholder="Buscar aluno...">
                     </div>
-
-                    <select class="filter-select" id="statusFilter">
-                        <option value="all">Todos os Status</option>
-                        <option value="Risk">🔴 Risco Ativo (Hoje)</option>
-                        <option value="History">🟡 Histórico (Passado)</option>
-                        <option value="Safe">🟢 Regular</option>
+                    <select class="filter-select" id="statusFilter" name="statusFilter">
+                        <option value="all">Todos os status</option>
+                        <option value="Risk">🔴 Risco Ativo (Últimos 30 min)</option>
+                        <option value="Recurrent">🟠 Reincidente (Múltiplas nas últimas 24h)</option>
+                        <option value="History">🟡 Histórico (Últimas 24h)</option>
+                        <option value="Safe">🟢 Regular (Sem riscos)</option>
                     </select>
                 </div>
 
@@ -145,7 +149,7 @@ $iniciais = strtoupper(substr($nomeUsuario, 0, 2));
     </div>
 
     <script src="../js/controleSala.js"></script>
-      <script>
+    <script>
         lucide.createIcons();
     </script>
 </body>

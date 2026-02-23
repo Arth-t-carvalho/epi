@@ -722,6 +722,6 @@ function verificarNovasOcorrencias() {
         })
         .catch(err => console.error(err));
 }
-
+// <------------------------------------------>//
 setInterval(verificarNovasOcorrencias, 5000);
 verificarNovasOcorrencias(); 

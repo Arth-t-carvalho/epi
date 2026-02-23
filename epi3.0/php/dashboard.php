@@ -768,6 +768,10 @@ $rankingModal = $stmtRankingModal->fetchAll(PDO::FETCH_ASSOC);
                 <i data-lucide="settings"></i>
                 <span>Configurações</span>
             </a>
+            <a class="nav-item" href="monitoramento.php">
+                <i data-lucide="monitor"></i>
+                <span>Monitoramento</span>
+            </a>
 
         </nav>
     </aside>
@@ -1108,7 +1112,7 @@ $rankingModal = $stmtRankingModal->fetchAll(PDO::FETCH_ASSOC);
     </div>
 
     <div id="notification-container"></div>
-    
+
     <script src="https://unpkg.com/lucide@latest"></script>
     <script>
         lucide.createIcons();

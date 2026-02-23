@@ -8,9 +8,9 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <link rel="stylesheet" href="../css/configuracoes.css">
     <link rel="stylesheet" href="../css/dashboard.css">
-    
+
     <style>
-   
+
     </style>
 </head>
 
@@ -46,9 +46,14 @@
                 <span>Ocorrências</span>
             </a>
 
-            <a class="nav-item active" href="configuracoes.php">
+            <a class="nav-item " href="configuracoes.php">
                 <i data-lucide="settings"></i>
                 <span>Configurações</span>
+            </a>
+
+               <a class="nav-item active" href="configuracoes.php">
+                <i data-lucide="settings"></i>
+                <span>Monitoramento</span>
             </a>
         </nav>
     </aside>
@@ -131,8 +136,21 @@
 
                     <div class="control-row">
                         <div class="control-label">
+                            <span>Link nos Cards de Infrações</span>
+                            <small>clique nos cards de infração para ir para outras paginas</small>
+
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="toggle-link" onchange="toggleLinkAbility()">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="control-row">
+                        <div class="control-label">
                             <span>Link nos Cards</span>
                             <small>Permitir clique para detalhes</small>
+
                         </div>
                         <label class="switch">
                             <input type="checkbox" id="toggle-link" onchange="toggleLinkAbility()">
@@ -146,7 +164,7 @@
                     <div class="control-row">
                         <div class="control-label">
                             <span>Auto-Refresh</span>
-                            <small>Atualizar dados automaticamente</small>
+                            <small>Permitir que as informações mude</small>
                         </div>
                         <label class="switch">
                             <input type="checkbox" checked>
@@ -200,6 +218,15 @@
     </main>
 
     <script>
+        function toggleDarkMode() {
+            const body = document.documentElement; // ou document.body
+
+            if (body.getAttribute("data-theme") === "dark") {
+                body.removeAttribute("data-theme");
+            } else {
+                body.setAttribute("data-theme", "dark");
+            }
+        }
         // Inicializa ícones do Lucide
         lucide.createIcons();
 
