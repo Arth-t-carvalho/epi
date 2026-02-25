@@ -14,7 +14,7 @@ require_once __DIR__ . '/../config/auth.php';
     <link rel="stylesheet" href="../css/Ocorrencia.css">
     <script src="https://unpkg.com/lucide@latest"></script>
 
-    <style>
+ <style>
         /* ==========================================
            TEMA CLARO - ESTILO APPLE (CLEAN & MINIMAL)
            ========================================== */
@@ -314,8 +314,86 @@ require_once __DIR__ . '/../config/auth.php';
         .meet-wrapper.layout-expanded .meet-presentation {
             flex: 1; /* Câmera ocupa a tela toda */
         }
+        /* ==========================================
+           CARDS DE INFRAÇÃO (COM SOMBRA FORTE)
+           ========================================== */
+        .chat-logs {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            overflow-y: auto;
+            padding-right: 5px; /* Espaço para a barra de rolagem */
+        }
+
+        /* Estilizando a barra de rolagem para ficar mais limpa */
+        .chat-logs::-webkit-scrollbar {
+            width: 6px;
+        }
+        .chat-logs::-webkit-scrollbar-thumb {
+            background-color: #d1d1d6;
+            border-radius: 10px;
+        }
+
+        .infraction-card {
+            background: #ffffff;
+            border-left: 4px solid #ff3b30; /* Vermelho alerta */
+            /* SOMBRA FORTE SOLICITADA */
+            box-shadow: 0 8px 20px -4px rgba(0, 0, 0, 0.4), 0 4px 12px -2px rgba(0, 0, 0, 0.3); 
+            border-radius: 12px;
+            padding: 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-shrink: 0; /* Impede que o card seja esmagado */
+            animation: dropIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        .infraction-icon {
+            color: #ff3b30;
+            background: #ffe5e5;
+            padding: 8px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 10px -2px rgba(255, 59, 48, 0.3);
+        }
+
+        .infraction-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .infraction-title {
+            font-weight: 700;
+            font-size: 13px;
+            margin-bottom: 2px;
+            color: #1d1d1f;
+        }
+
+        .infraction-message {
+            font-size: 12px;
+            color: #515154;
+        }
+
+        .infraction-time {
+            font-size: 11px;
+            font-weight: 600;
+            color: #ff3b30;
+            margin-top: 4px;
+        }
+
+        @keyframes dropIn {
+            0% { transform: translateY(-20px); opacity: 0; }
+            100% { transform: translateY(0); opacity: 1; }
+        }
     </style>
+
 </head>
+
 
 <body>
 
@@ -326,12 +404,12 @@ require_once __DIR__ . '/../config/auth.php';
                 <circle cx="12" cy="12" r="10" />
             </svg>
 
-            &nbsp; EPI <span>GUARD</span>
+              EPI <span>GUARD</span>
         </div>
 
         <nav class="nav-menu">
 
-            <a class="nav-item active" href="dashboard.php">
+            <a class="nav-item " href="dashboard.php">
                 <i data-lucide="layout-dashboard"></i>
                 <span>Dashboard</span>
             </a>
@@ -355,7 +433,7 @@ require_once __DIR__ . '/../config/auth.php';
                 <i data-lucide="settings"></i>
                 <span>Configurações</span>
             </a>
-            <a class="nav-item" href="monitoramento.php">
+            <a class="nav-item active" href="monitoramento.php">
                 <i data-lucide="monitor"></i>
                 <span>Monitoramento</span>
             </a>
@@ -398,31 +476,18 @@ require_once __DIR__ . '/../config/auth.php';
                     </div>
                 </section>
 
-                <aside class="meet-right-panel">
+              <aside class="meet-right-panel">
                     <div class="chat-panel">
                         <div class="chat-header">
-                            Detalhes do Sistema
-                            <i data-lucide="info" size="18" style="color: #86868b; cursor:pointer"></i>
+                            Infrações Recentes
+                            <i data-lucide="alert-triangle" size="18" style="color: #ff3b30;"></i>
                         </div>
                         <div class="chat-subtitle">
                             Monitoramento IA Contínuo Ativado
                         </div>
                         
-                        <div class="chat-logs">
-                            <div class="chat-msg">
-                                <strong>Log de Inicialização</strong><br>
-                                <span style="color:#86868b; font-size:11px;">14:50 - Sistema EPI Guard online. Câmeras calibradas.</span>
+                        <div class="chat-logs" id="notification-container">
                             </div>
-                            <div class="chat-msg msg-alert">
-                                <strong>⚠️ ALERTA DE INFRAÇÃO</strong><br>
-                                Aluno detectado sem óculos de proteção na bancada 3.<br>
-                                <span style="color:#86868b; font-size:11px;">14:55 - Captura enviada ao dashboard.</span>
-                            </div>
-                            <div class="chat-msg">
-                                <strong>Status Operacional</strong><br>
-                                <span style="color:#86868b; font-size:11px;">14:58 - Varredura de ambiente concluída. 14 alunos seguros.</span>
-                            </div>
-                        </div>
                     </div>
                 </aside>
             </div>
@@ -498,6 +563,75 @@ require_once __DIR__ . '/../config/auth.php';
                 document.getElementById('layoutDropdown').classList.remove('active');
             }
         });
+        // <------------------------------------------>
+        // LÓGICA DE NOTIFICAÇÕES (BANCO DE DADOS)
+        // <------------------------------------------>
+        let ultimoIdNotificacao = 0;
+
+        function mostrarNotificacao(aluno, epi_nome, hora_banco) {
+            const container = document.getElementById('notification-container');
+            const card = document.createElement('div');
+            card.className = 'infraction-card';
+
+            // Tratamento da hora (caso o banco não envie, pega a hora atual do PC)
+            let horaExibicao = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            if (hora_banco) {
+                // Tenta formatar a data_hora vinda do banco (ex: "2023-10-25 14:30:00")
+                const dataObj = new Date(hora_banco);
+                if (!isNaN(dataObj.getTime())) {
+                    horaExibicao = dataObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                }
+            }
+
+            // Constrói o HTML do card
+            card.innerHTML = `
+                <div class="infraction-icon">
+                    <i data-lucide="alert-circle" width="20" height="20"></i>
+                </div>
+                <div class="infraction-content">
+                    <div class="infraction-title">Alerta de EPI</div>
+                    <div class="infraction-message"><b>${aluno}</b> • ${epi_nome}</div>
+                    <span class="infraction-time">${horaExibicao}</span>
+                </div>
+            `;
+
+            // Usa prepend para colocar a notificação mais recente no TOPO da lista
+            container.prepend(card);
+            
+            // Renderiza o ícone do lucide no card recém-criado
+            lucide.createIcons({ root: card });
+        }
+
+        function verificarNovasOcorrencias() {
+            fetch(../php/check_notificacoes.php?last_id=${ultimoIdNotificacao}, {
+                headers: { "X-Requested-With": "XMLHttpRequest" }
+            })
+            .then(res => res.json())
+            .then(data => {
+                console.log("RETORNO COMPLETO:", data);
+
+                if (data.status === 'init') {
+                    ultimoIdNotificacao = data.last_id;
+                    return;
+                }
+
+                if (data.status === 'success' && data.dados.length > 0) {
+                    data.dados.forEach(ocorrencia => {
+                        mostrarNotificacao(
+                            ocorrencia.aluno,          // Nome do aluno que vem do banco
+                            ocorrencia.epi_nome,       // Nome do EPI faltando que vem do banco
+                            ocorrencia.data_hora       // Coluna data_hora da sua tabela
+                        );
+                        // Atualiza o último ID processado
+                        ultimoIdNotificacao = ocorrencia.id;
+                    });
+                }
+            })
+            .catch(err => console.error("Erro na verificação de ocorrências:", err));
+        }
+
+        // Executa a cada 5 segundos
+        setInterval(verificarNovasOcorrencias, 5000);
     </script>
 
 </body>
