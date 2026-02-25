@@ -603,9 +603,9 @@ $rankingModal = $stmtRankingModal->fetchAll(PDO::FETCH_ASSOC);
                 <i data-lucide="settings"></i>
                 <span>Configurações</span>
             </a>
-            <a class="nav-item" href="gestao.php">
+            <a class="nav-item" href="gestaoUsu.html">
                 <i data-lucide="settings"></i>
-                <span>gestao    </span>
+                <span>Gestão</span>
             </a>
         </nav>
     </aside>
