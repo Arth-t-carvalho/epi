@@ -8,10 +8,6 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <link rel="stylesheet" href="../css/configuracoes.css">
     <link rel="stylesheet" href="../css/dashboard.css">
-
-    <style>
-
-    </style>
 </head>
 
 <body>
@@ -46,14 +42,9 @@
                 <span>Ocorrências</span>
             </a>
 
-            <a class="nav-item " href="configuracoes.php">
+            <a class="nav-item active" href="configuracoes.php">
                 <i data-lucide="settings"></i>
                 <span>Configurações</span>
-            </a>
-
-               <a class="nav-item active" href="configuracoes.php">
-                <i data-lucide="settings"></i>
-                <span>Monitoramento</span>
             </a>
         </nav>
     </aside>
@@ -68,7 +59,6 @@
             </header>
 
             <div class="config-grid">
-
                 <div class="config-card">
                     <div class="config-header"><i data-lucide="monitor"></i> Interface</div>
 
@@ -113,21 +103,17 @@
                     <div class="control-row">
                         <div class="control-label">
                             <span>Tipo de Gráfico</span>
-                            <small>Altera visual do fieldset</small>
+                            <small>Altera o tipo do gráfico principal</small>
                         </div>
-                        <select class="form-select" onchange="changeChartType(this.value)">
-                            <option value="donut">Rosca</option>
+                        <select class="form-select" id="chartTypeSelect" onchange="handleChartTypeChange(this.value)">
                             <option value="bar">Barras</option>
                             <option value="line">Linha</option>
+                            <option value="donut">Rosca (Fieldset)</option>
                         </select>
                     </div>
 
                     <div class="control-row">
                         <div class="control-label">
-                            <span>Cor do Destaque</span>
-                            <small>Muda cor dos gráficos</small>
-                        </div>
-                        <input type="color" value="#E30613" onchange="changeChartColor(this.value)">
                     </div>
                 </div>
 
@@ -136,21 +122,8 @@
 
                     <div class="control-row">
                         <div class="control-label">
-                            <span>Link nos Cards de Infrações</span>
-                            <small>clique nos cards de infração para ir para outras paginas</small>
-
-                        </div>
-                        <label class="switch">
-                            <input type="checkbox" id="toggle-link" onchange="toggleLinkAbility()">
-                            <span class="slider"></span>
-                        </label>
-                    </div>
-
-                    <div class="control-row">
-                        <div class="control-label">
                             <span>Link nos Cards</span>
                             <small>Permitir clique para detalhes</small>
-
                         </div>
                         <label class="switch">
                             <input type="checkbox" id="toggle-link" onchange="toggleLinkAbility()">
@@ -158,16 +131,17 @@
                         </label>
                     </div>
                 </div>
+
                 <div class="config-card">
                     <div class="config-header"><i data-lucide="refresh-cw"></i> Atualização de Dados</div>
 
                     <div class="control-row">
                         <div class="control-label">
                             <span>Auto-Refresh</span>
-                            <small>Permitir que as informações mude</small>
+                            <small>Atualizar dados automaticamente</small>
                         </div>
                         <label class="switch">
-                            <input type="checkbox" checked>
+                            <input type="checkbox" id="autoRefresh" checked>
                             <span class="slider"></span>
                         </label>
                     </div>
@@ -177,11 +151,11 @@
                             <span>Intervalo</span>
                             <small>Frequência de busca</small>
                         </div>
-                        <select class="form-select" style="width: 140px;">
-                            <option>Tempo Real</option>
-                            <option>30 Segundos</option>
-                            <option>1 Minuto</option>
-                            <option>5 Minutos</option>
+                        <select class="form-select" id="refreshInterval" style="width: 140px;">
+                            <option value="real">Tempo Real</option>
+                            <option value="30">30 Segundos</option>
+                            <option value="60">1 Minuto</option>
+                            <option value="300">5 Minutos</option>
                         </select>
                     </div>
                 </div>
@@ -195,7 +169,7 @@
                             <small>Tocar bip ao detectar infração</small>
                         </div>
                         <label class="switch">
-                            <input type="checkbox">
+                            <input type="checkbox" id="soundAlert">
                             <span class="slider"></span>
                         </label>
                     </div>
@@ -206,57 +180,116 @@
                             <small>Enviar e-mail se infração crítica</small>
                         </div>
                         <label class="switch">
-                            <input type="checkbox" checked>
+                            <input type="checkbox" id="emailAlert" checked>
                             <span class="slider"></span>
                         </label>
                     </div>
                 </div>
-
             </div>
         </div>
-
     </main>
 
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="../js/chart-manager.js"></script>
     <script>
-        function toggleDarkMode() {
-            const body = document.documentElement; // ou document.body
-
-            if (body.getAttribute("data-theme") === "dark") {
-                body.removeAttribute("data-theme");
-            } else {
-                body.setAttribute("data-theme", "dark");
-            }
-        }
         // Inicializa ícones do Lucide
         lucide.createIcons();
 
         // Variável de estado para link habilitado
         let linksEnabled = false;
 
-        // 1. Lógica do Clique no Card (Com trava)
+        // Função para manipular mudança no tipo de gráfico
+        function handleChartTypeChange(value) {
+            // Se for 'donut', mantém o comportamento original do fieldset
+            if (value === 'donut') {
+                console.log('Tipo donut selecionado (fieldset)');
+                
+                // Tenta encontrar os elementos do fieldset (se existirem)
+                const chartDonut = document.getElementById('chart-donut');
+                const chartBar = document.getElementById('chart-bar');
+                const chartLine = document.getElementById('chart-line');
+                
+                if (chartDonut && chartBar && chartLine) {
+                    chartDonut.style.display = 'flex';
+                    chartBar.style.display = 'none';
+                    chartLine.style.display = 'none';
+                }
+            } 
+            // Se for 'bar' ou 'line', altera o gráfico principal do dashboard
+            else if (value === 'bar' || value === 'line') {
+                // Chama a função do chart-manager para mudar o tipo
+                if (typeof window.changeMainChartType === 'function') {
+                    window.changeMainChartType(value);
+                    
+                    // Tenta aplicar a mudança em outras abas do dashboard
+                    try {
+                        if (window.opener && !window.opener.closed) {
+                            window.opener.changeMainChartType(value);
+                        }
+                    } catch(e) {
+                        console.log('Não foi possível acessar outras abas');
+                    }
+                }
+            }
+            
+            // Salva a preferência
+            localStorage.setItem('preferredChartType', value);
+        }
+
+        // 1. Lógica do Clique no Card
         function toggleLinkAbility() {
             linksEnabled = document.getElementById('toggle-link').checked;
+            localStorage.setItem('linksEnabled', linksEnabled);
 
             // Adiciona feedback visual (cursor pointer)
-            const cards = document.querySelectorAll('.card');
-            cards.forEach(c => {
-                if (linksEnabled) c.classList.add('clickable');
-                else c.classList.remove('clickable');
-            });
+            try {
+                if (window.opener && !window.opener.closed) {
+                    const cards = window.opener.document.querySelectorAll('.card, .violation-card, .student-card');
+                    cards.forEach(card => {
+                        if (linksEnabled) card.classList.add('clickable');
+                        else card.classList.remove('clickable');
+                    });
+                }
+            } catch(e) {
+                console.log('Não foi possível acessar outras abas');
+            }
         }
 
         function handleCardClick(cardId) {
             if (linksEnabled) {
-                // Simula ir para outra página
                 alert(`Redirecionando para detalhes de: ${cardId}`);
-                // window.location.href = 'infracoes.php?filtro=' + cardId;
             }
         }
 
-        // 2. Dark Mode
+        // 2. Dark Mode - FUNÇÃO CORRIGIDA
         function toggleTheme() {
             const isDark = document.getElementById('toggle-darkmode').checked;
-            document.body.setAttribute('data-theme', isDark ? 'dark' : 'light');
+            
+            // Aplicar tema na página atual
+            if (isDark) {
+                document.body.setAttribute('data-theme', 'dark');
+            } else {
+                document.body.removeAttribute('data-theme');
+            }
+            
+            // Salvar preferência
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            
+            // Tentar aplicar em outras abas do dashboard
+            try {
+                if (window.opener && !window.opener.closed) {
+                    if (isDark) {
+                        window.opener.document.body.setAttribute('data-theme', 'dark');
+                    } else {
+                        window.opener.document.body.removeAttribute('data-theme');
+                    }
+                }
+            } catch(e) {
+                console.log('Não foi possível acessar outras abas');
+            }
+            
+            // Disparar evento de storage para sincronizar outras abas
+            localStorage.setItem('theme_trigger', Date.now());
         }
 
         // 3. Visibilidade de Porcentagem
@@ -265,9 +298,17 @@
             document.querySelectorAll(selector).forEach(el => {
                 el.style.display = isChecked ? 'inline' : 'none';
             });
+            
+            try {
+                if (window.opener && !window.opener.closed) {
+                    window.opener.document.querySelectorAll(selector).forEach(el => {
+                        el.style.display = isChecked ? 'inline' : 'none';
+                    });
+                }
+            } catch(e) {}
         }
 
-        // 4. Visibilidade de Status (Badges inteiros)
+        // 4. Visibilidade de Status
         function toggleStatus() {
             const isChecked = document.getElementById('toggle-status').checked;
             document.querySelectorAll('.status-wrapper').forEach(el => {
@@ -275,32 +316,84 @@
                     el.style.background = 'transparent';
                     el.style.border = 'none';
                     el.style.color = 'var(--text-muted)';
-                    el.querySelector('svg').style.display = 'none';
+                    const svg = el.querySelector('svg');
+                    if (svg) svg.style.display = 'none';
                 } else {
                     el.style.background = '';
                     el.style.border = '';
                     el.style.color = '';
-                    el.querySelector('svg').style.display = 'inline';
+                    const svg = el.querySelector('svg');
+                    if (svg) svg.style.display = 'inline';
                 }
             });
+            
+            try {
+                if (window.opener && !window.opener.closed) {
+                    window.opener.document.querySelectorAll('.status-wrapper').forEach(el => {
+                        if (!isChecked) {
+                            el.style.background = 'transparent';
+                            el.style.border = 'none';
+                            el.style.color = 'var(--text-muted)';
+                            const svg = el.querySelector('svg');
+                            if (svg) svg.style.display = 'none';
+                        } else {
+                            el.style.background = '';
+                            el.style.border = '';
+                            el.style.color = '';
+                            const svg = el.querySelector('svg');
+                            if (svg) svg.style.display = 'inline';
+                        }
+                    });
+                }
+            } catch(e) {}
         }
 
-        // 5. Troca de Tipo de Gráfico (Fieldset)
-        function changeChartType(type) {
-            document.getElementById('chart-donut').style.display = 'none';
-            document.getElementById('chart-bar').style.display = 'none';
-            document.getElementById('chart-line').style.display = 'none';
-
-            if (type === 'donut') document.getElementById('chart-donut').style.display = 'flex';
-            if (type === 'bar') document.getElementById('chart-bar').style.display = 'flex';
-            if (type === 'line') document.getElementById('chart-line').style.display = 'block';
-        }
-
-        // 6. Troca de Cor Dinâmica
+        // 5. Troca de Cor Dinâmica
         function changeChartColor(color) {
             document.documentElement.style.setProperty('--chart-main-color', color);
+            
+            try {
+                if (window.opener && !window.opener.closed) {
+                    window.opener.document.documentElement.style.setProperty('--chart-main-color', color);
+                }
+            } catch(e) {}
+            
+            localStorage.setItem('chartColor', color);
         }
 
+        // Carregar preferências salvas ao iniciar
+        document.addEventListener('DOMContentLoaded', function() {
+            // Tema
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'dark') {
+                document.body.setAttribute('data-theme', 'dark');
+                document.getElementById('toggle-darkmode').checked = true;
+            }
+            
+            // Links nos cards
+            const savedLinks = localStorage.getItem('linksEnabled') === 'true';
+            document.getElementById('toggle-link').checked = savedLinks;
+            
+            // Tipo de gráfico preferido
+            const preferredChartType = localStorage.getItem('preferredChartType') || 'bar';
+            const chartSelect = document.getElementById('chartTypeSelect');
+            if (chartSelect) {
+                chartSelect.value = preferredChartType;
+            }
+            
+            // Cor do gráfico
+            const savedColor = localStorage.getItem('chartColor') || '#E30613';
+            const colorPicker = document.getElementById('chartColorPicker');
+            if (colorPicker) {
+                colorPicker.value = savedColor;
+                document.documentElement.style.setProperty('--chart-main-color', savedColor);
+            }
+            
+            // Salvar cor quando mudar
+            colorPicker.addEventListener('change', function(e) {
+                localStorage.setItem('chartColor', e.target.value);
+            });
+        });
     </script>
 </body>
 

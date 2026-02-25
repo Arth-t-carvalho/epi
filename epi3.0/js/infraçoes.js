@@ -16,7 +16,7 @@ function openModalPHP(imgUrl, nome, epi, horaTexto, dataCompleta) {
 
     if (!modal) {
         console.error("Erro: Modal não encontrado no HTML!");
-        return;
+        return;;
     }
 
     // 1. Preenche os dados visuais
@@ -101,3 +101,76 @@ function forceClose() {
     // Limpa a imagem para não aparecer a anterior ao abrir um novo card
     document.getElementById('modalImg').src = "";
 }
+
+    // Verificar preferência salva ao carregar a página
+    document.addEventListener('DOMContentLoaded', function() {
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'dark') {
+            document.body.setAttribute('data-theme', 'dark');
+        }
+        
+        // Verificar estado dos links nos cards (se existirem)
+        const linksEnabled = localStorage.getItem('linksEnabled') === 'true';
+        if (linksEnabled) {
+            document.querySelectorAll('.card, .violation-card, .student-card').forEach(c => {
+                c.classList.add('clickable');
+            });
+        }
+    });
+
+    // Função para alternar tema (será chamada pela página de configurações)
+    window.toggleTheme = function() {
+        const isDark = document.body.getAttribute('data-theme') === 'dark';
+        const newTheme = isDark ? 'light' : 'dark';
+        
+        document.body.setAttribute('data-theme', newTheme);
+        localStorage.setItem('theme', newTheme);
+        
+        // Mostrar notificação de mudança de tema
+        showThemeNotification(newTheme);
+    }
+
+    // Função para mostrar notificação de tema
+    function showThemeNotification(theme) {
+        const container = document.getElementById('notification-container');
+        if (!container) return;
+        
+        const toast = document.createElement('div');
+        toast.className = 'toast';
+        toast.innerHTML = `
+            <div class="toast-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <path d="M12 16v-4M12 8h.01"></path>
+                </svg>
+            </div>
+            <div class="toast-content">
+                <span class="toast-title">Tema ${theme === 'dark' ? 'escuro' : 'claro'} ativado</span>
+                <span class="toast-message">Aparência alterada com sucesso</span>
+                <span class="toast-time">agora</span>
+            </div>
+        `;
+        
+        container.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.classList.add('removing');
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+
+    // Função para alternar links nos cards
+    window.toggleLinkAbility = function() {
+        const enabled = localStorage.getItem('linksEnabled') === 'true';
+        const newState = !enabled;
+        
+        document.querySelectorAll('.card, .violation-card, .student-card').forEach(card => {
+            if (newState) {
+                card.classList.add('clickable');
+            } else {
+                card.classList.remove('clickable');
+            }
+        });
+        
+        localStorage.setItem('linksEnabled', newState);
+    }
