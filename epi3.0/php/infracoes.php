@@ -1,12 +1,8 @@
 <?php
 require_once __DIR__ . '/../config/database.php';
 
-// ==========================================
-// 1. LÓGICA DE FILTROS (BACK-END)
-// ==========================================
 $filtroData = $_GET['periodo'] ?? ($_GET['filtro'] ?? 'hoje');
 $filtroEpi = isset($_GET['epi']) ? $_GET['epi'] : '';
-
 
 try {
     $stmtEpis = $pdo->query("SELECT id, nome FROM epis ORDER BY nome ASC");
@@ -19,12 +15,11 @@ try {
             a.nome AS aluno_nome,
             c.nome AS aluno_curso,
             e.nome AS epi_nome,
-            ev.imagem AS foto_caminho -- Buscando o campo 'imagem' da tabela 'evidencias'
+            ev.imagem AS foto_caminho
         FROM ocorrencias o
         JOIN alunos a ON a.id = o.aluno_id
         LEFT JOIN cursos c ON c.id = a.curso_id
         JOIN epis e ON e.id = o.epi_id
-        /* Relacionamento com a tabela evidencias pelo ocorrencia_id */
         LEFT JOIN evidencias ev ON ev.ocorrencia_id = o.id 
         WHERE 1=1
     ";
@@ -57,189 +52,47 @@ try {
 
 <!DOCTYPE html>
 <html lang="pt-br">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EPI Guard | Infrações</title>
+    <link rel="stylesheet" href="../css/theme-variables.css">
     <link rel="stylesheet" href="../css/infracoes.css">
-    <style>
-        /* MANTIDO SEU CSS ORIGINAL */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.85);
-            display: none;
-            z-index: 10000;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .modal-overlay.active {
-            display: flex !important;
-        }
-
-        .modal-content {
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-            width: 90%;
-            max-width: 500px;
-            position: relative;
-            text-align: center;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-
-        .full-image {
-            width: 100%;
-            max-height: 55vh;
-            object-fit: contain;
-            border-radius: 8px;
-            background: #000;
-        }
-
-        .btn-assinar {
-            background-color: #DC2626;
-            color: white;
-            border: none;
-            padding: 12px;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            width: 100%;
-            transition: background 0.2s;
-            margin-top: 10px;
-        }
-
-        .btn-assinar:hover {
-            background-color: #B91C1C;
-        }
-
-        .grid-cards {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-            gap: 15px;
-            padding: 20px 0;
-        }
-
-        .violation-card {
-            background: white;
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
-            cursor: pointer;
-            border: 1px solid #f0f0f0;
-            transition: transform 0.2s;
-        }
-
-        .violation-card:hover {
-            transform: translateY(-3px);
-        }
-
-        .card-image-wrapper {
-            height: 140px;
-            background: #f3f4f6;
-            position: relative;
-        }
-
-        .card-image {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .card-content {
-            padding: 12px;
-        }
-
-        .violation-tag {
-            background: #fee2e2;
-            color: #dc2626;
-            padding: 3px 8px;
-            border-radius: 4px;
-            font-size: 11px;
-            font-weight: 700;
-        }
-
-        .infrator-name {
-            display: block;
-            font-weight: 600;
-            font-size: 14px;
-            margin-top: 6px;
-            color: #1f2937;
-        }
-
-        .timestamp {
-            color: #6b7280;
-            font-size: 11px;
-            margin-top: 4px;
-        }
-
-        .header-controls {
-            display: flex;
-            gap: 15px;
-            align-items: center;
-            margin-top: 15px;
-            flex-wrap: wrap;
-        }
-
-        .filter-select {
-            padding: 8px 12px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            cursor: pointer;
-        }
-    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
-
 <body>
     <aside class="sidebar">
         <div class="brand">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#E30613" stroke-width="3"
                 style="filter: drop-shadow(0 2px 4px rgba(227, 6, 19, 0.3));">
-                <circle cx="12" cy="12" r="10" />
+                <circle cx="12" cy="12" r="10"/>
             </svg>
-
             &nbsp; EPI <span>GUARD</span>
         </div>
 
         <nav class="nav-menu">
-
-            <a class="nav-item " href="dashboard.php">
+            <a class="nav-item" href="dashboard.php">
                 <i data-lucide="layout-dashboard"></i>
                 <span>Dashboard</span>
             </a>
-
             <a class="nav-item active" href="infracoes.php">
                 <i data-lucide="alert-triangle"></i>
                 <span>Infrações</span>
             </a>
-
             <a class="nav-item" href="controleSala.php">
                 <i data-lucide="users"></i>
                 <span>Controle de Sala</span>
             </a>
-
             <a class="nav-item" href="ocorrencias.php">
                 <i data-lucide="file-text"></i>
                 <span>Ocorrências</span>
             </a>
-
             <a class="nav-item" href="configuracoes.php">
                 <i data-lucide="settings"></i>
                 <span>Configurações</span>
             </a>
-              <a class="nav-item" href="monitoramento.php">
-                <i data-lucide="monitor"></i>
-                <span>Monitoramento</span>
-            </a>
-
         </nav>
     </aside>
 
@@ -247,7 +100,7 @@ try {
         <header class="header">
             <div>
                 <div class="page-title">
-                    <h1>Painel Geral</h1>
+                    <h1>Infrações Registradas</h1>
                     <p>Monitoramento de Segurança</p>
                 </div>
                 <form method="GET" class="header-controls">
@@ -262,7 +115,7 @@ try {
                         <option value="">Todos os EPIs</option>
                         <?php foreach ($listaEpis as $epi): ?>
                             <option value="<?php echo $epi['id']; ?>" <?php echo $filtroEpi == $epi['id'] ? 'selected' : ''; ?>>
-                                Apenas <?php echo htmlspecialchars($epi['nome']); ?>
+                                <?php echo htmlspecialchars($epi['nome']); ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
@@ -273,27 +126,35 @@ try {
         <div class="gallery-container">
             <div class="grid-cards" id="cardsContainer">
                 <?php if (empty($infracoes)): ?>
-                    <p style="padding:20px; color:#666;">Nenhuma infração encontrada.</p>
+                    <p style="padding:20px; color: var(--text-muted);">Nenhuma infração encontrada.</p>
                 <?php else: ?>
                     <?php foreach ($infracoes as $item):
+                        $nomeArquivo = $item['foto_caminho'];
+                        $diretorioUploads = "../uploads/";
+                        $caminhoFisico = __DIR__ . "/../uploads/" . $nomeArquivo;
 
-                        $imgSrc = "mostrar_imagem.php?id=" . $item['id'];
+                        if (!empty($nomeArquivo) && file_exists($caminhoFisico)) {
+                            $imgSrc = $diretorioUploads . $nomeArquivo;
+                        } else {
+                            $imgSrc = "https://via.placeholder.com/400x300?text=Sem+Imagem";
+                        }
 
                         $nomeSafe = htmlspecialchars($item['aluno_nome'] ?? 'Desconhecido', ENT_QUOTES);
                         $epiSafe = htmlspecialchars($item['epi_nome'] ?? 'EPI', ENT_QUOTES);
                         $setorSafe = htmlspecialchars($item['aluno_curso'] ?? 'Geral', ENT_QUOTES);
-
                         $dataObj = new DateTime($item['data_hora']);
                         $horaF = $dataObj->format('H:i');
                         $dataF = $dataObj->format('d/m/Y');
                         ?>
-                        <div class="violation-card"
-                            onclick="openModalPHP('<?php echo $imgSrc; ?>', '<?php echo $nomeSafe; ?>', '<?php echo $epiSafe; ?>', '<?php echo $horaF; ?>', '<?php echo $dataF; ?>')">
 
+                        <div class="violation-card"
+                            onclick="openModal('<?php echo $imgSrc; ?>', '<?php echo $nomeSafe; ?>', '<?php echo $epiSafe; ?>', '<?php echo $horaF; ?>', '<?php echo $dataF; ?>')">
                             <div class="card-image-wrapper">
                                 <img src="<?php echo $imgSrc; ?>" class="card-image" loading="lazy">
+                                <div class="card-overlay">
+                                    <span class="zoom-icon">🔍</span>
+                                </div>
                             </div>
-
                             <div class="card-content">
                                 <span class="violation-tag"><?php echo $epiSafe; ?></span>
                                 <span class="infrator-name"><?php echo $nomeSafe; ?></span>
@@ -308,30 +169,44 @@ try {
 
     <div class="modal-overlay" id="imageModal" onclick="closeModal(event)">
         <div class="modal-content" onclick="event.stopPropagation()">
-            <button onclick="forceClose()"
-                style="position:absolute; right:10px; top:10px; border:none; background:transparent; font-size:24px; cursor:pointer;">&times;</button>
+            <button class="close-modal-btn" onclick="forceClose()">✕</button>
             <img src="" id="modalImg" class="full-image">
             <div style="text-align:left; width:100%;">
-                <h3 id="modalName" style="margin: 5px 0 0 0; color:#1f2937;">Nome</h3>
-                <p id="modalDesc" style="color:#dc2626; font-weight:bold; margin: 5px 0;">Infração</p>
-                <p id="modalTime" style="color:#666; font-size:14px; margin:0;">Horário</p>
+                <h3 id="modalName" style="margin: 10px 0 0 0; color: var(--text-main);">Nome</h3>
+                <p id="modalDesc" style="color: var(--danger); font-weight:bold; margin: 5px 0;">Infração</p>
+                <p id="modalTime" style="color: var(--text-muted); font-size:14px; margin:0;">Horário</p>
             </div>
             <button id="btnAssinar" class="btn-assinar">Assinar Ocorrência</button>
         </div>
     </div>
 
+    <div id="notification-container"></div>
+
     <script>
-        function openModalPHP(src, nome, epi, hora, dataCompleta) {
+        lucide.createIcons();
+
+        // Funções do Modal
+        function openModal(src, nome, epi, hora, dataCompleta) {
             const modal = document.getElementById('imageModal');
             const modalImg = document.getElementById('modalImg');
             const modalName = document.getElementById('modalName');
             const modalDesc = document.getElementById('modalDesc');
             const modalTime = document.getElementById('modalTime');
+            const btnAssinar = document.getElementById('btnAssinar');
 
             modalImg.src = src;
             modalName.innerText = nome;
             modalDesc.innerText = "Infração: " + epi;
             modalTime.innerText = "Horário: " + hora + " | Data: " + dataCompleta;
+
+            btnAssinar.onclick = function() {
+                const params = new URLSearchParams({
+                    aluno: nome,
+                    epi: epi,
+                    data: dataCompleta
+                });
+                window.location.href = `ocorrencias.php?${params.toString()}`;
+            };
 
             modal.classList.add('active');
         }
@@ -347,12 +222,88 @@ try {
             modal.classList.remove('active');
             document.getElementById('modalImg').src = "";
         }
-    </script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <script>
-        lucide.createIcons();
-    </script>
-    <script src="../js/dashboard.js"></script>
-</body>
 
+        // Sistema de Tema
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'dark') {
+                document.body.setAttribute('data-theme', 'dark');
+            }
+            
+            const linksEnabled = localStorage.getItem('linksEnabled') === 'true';
+            if (linksEnabled) {
+                document.querySelectorAll('.violation-card').forEach(c => {
+                    c.classList.add('clickable');
+                });
+            }
+        });
+
+        window.toggleTheme = function() {
+            const isDark = document.body.getAttribute('data-theme') === 'dark';
+            const newTheme = isDark ? 'light' : 'dark';
+            
+            document.body.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            showThemeNotification(newTheme);
+        }
+
+        function showThemeNotification(theme) {
+            const container = document.getElementById('notification-container');
+            if (!container) return;
+            
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerHTML = `
+                <div class="toast-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="M12 16v-4M12 8h.01"></path>
+                    </svg>
+                </div>
+                <div class="toast-content">
+                    <span class="toast-title">Tema ${theme === 'dark' ? 'escuro' : 'claro'} ativado</span>
+                    <span class="toast-message">Aparência alterada com sucesso</span>
+                    <span class="toast-time">agora</span>
+                </div>
+            `;
+            
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.classList.add('removing');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        window.toggleLinkAbility = function() {
+            const enabled = localStorage.getItem('linksEnabled') === 'true';
+            const newState = !enabled;
+            
+            document.querySelectorAll('.violation-card').forEach(card => {
+                if (newState) {
+                    card.classList.add('clickable');
+                } else {
+                    card.classList.remove('clickable');
+                }
+            });
+            
+            localStorage.setItem('linksEnabled', newState);
+        }
+
+        // Transição de página nos links da sidebar
+        document.querySelectorAll('a.nav-item').forEach(link => {
+            link.addEventListener('click', (e) => {
+                const href = link.getAttribute('href');
+                if (!href || href === '#' || href.startsWith('javascript:')) return;
+                
+                // Não prevenir se for o link atual
+                if (link.classList.contains('active')) return;
+                
+                e.preventDefault();
+                document.body.classList.add('page-exit');
+                setTimeout(() => { window.location.href = href; }, 300);
+            });
+        });
+    </script>
+</body>
 </html>

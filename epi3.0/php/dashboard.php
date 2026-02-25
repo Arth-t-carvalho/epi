@@ -47,7 +47,7 @@ $stmtAlunosCriticos->execute([$cursoId]);
 $alunosCriticos = $stmtAlunosCriticos->fetchAll(PDO::FETCH_ASSOC);
 
 
-// --- COMPARAÇÕES (Acrescentar aqui) ---
+// --- COMPARAÇÕES ---
 
 // Ontem (para comparar com hoje)
 $stmtOntem = $pdo->prepare("SELECT COUNT(o.id) FROM ocorrencias o JOIN alunos a ON a.id = o.aluno_id WHERE a.curso_id = ? AND o.data_hora >= CURDATE() - INTERVAL 1 DAY AND o.data_hora < CURDATE()");
@@ -67,13 +67,9 @@ $stmtMesAnt->execute([$cursoId]);
 $infraMesAnterior = (int) $stmtMesAnt->fetchColumn();
 $percMes = ($infraMesAnterior > 0) ? round((($infraMes - $infraMesAnterior) / $infraMesAnterior) * 100, 1) : ($infraMes * 100);
 
-
 $stmtRankingModal = $pdo->prepare("SELECT a.nome, COUNT(o.id) AS total FROM alunos a JOIN ocorrencias o ON a.id = o.aluno_id WHERE a.curso_id = ? GROUP BY a.id ORDER BY total DESC");
 $stmtRankingModal->execute([$cursoId]);
 $rankingModal = $stmtRankingModal->fetchAll(PDO::FETCH_ASSOC);
-
-
-
 
 ?>
 
@@ -88,644 +84,483 @@ $rankingModal = $stmtRankingModal->fetchAll(PDO::FETCH_ASSOC);
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../css/dashboard.css">
     <style>
-        /* ==========================================================================
-   ESTILOS ESPECÍFICOS DO CALENDÁRIO (MODAL)
-   ========================================================================== */
-
-
-        /* =============================================================
-   NOVOS ESTILOS (Adicione ao final do dashboard.css)
-   ============================================================= */
-
-        /* --- 1. ANIMAÇÃO DE CHACOALHAR (ERRO NO INPUT) --- */
-        @keyframes shake-horizontal {
-
-            0%,
-            100% {
-                transform: translateX(0);
-            }
-
-            20%,
-            60% {
-                transform: translateX(-6px);
-            }
-
-            40%,
-            80% {
-                transform: translateX(6px);
-            }
+        /* =========================================
+        VARIÁVEIS GLOBAIS
+        ========================================= */
+        :root {
+            --primary: #E30613;
+            --primary-dark: #bf040f;
+            --primary-light: rgba(227, 6, 19, 0.1);
+            --secondary: #1F2937;
+            --text-main: #111827;
+            --text-muted: #64748B;
+            --bg-body: #e6e8ec;
+            --bg-card: #ebebeb;
+            --border: #CBD5E1;
+            --success: #10B981;
+            --danger: #EF4444;
+            --chart-main-color: #E30613;
         }
 
-        /* Classe que será adicionada via JS quando houver erro */
-        .input-wrapper.error-shake {
-            animation: shake-horizontal 0.4s ease-in-out;
-            border-color: #EF4444 !important;
-            /* Vermelho de erro */
-            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
+        /* =========================================
+        TEMA ESCURO
+        ========================================= */
+        [data-theme="dark"] {
+            --primary: #ff4d4d;
+            --primary-dark: #e63939;
+            --primary-light: rgba(255, 77, 77, 0.15);
+            --secondary: #E5E7EB;
+            --text-main: #F3F4F6;
+            --text-muted: #9CA3AF;
+            --bg-body: #1a1e24;
+            --bg-card: #2d3748;
+            --border: #4B5563;
+            --success: #34D399;
+            --danger: #F87171;
+            --chart-main-color: #ff4d4d;
         }
 
-        /* Garante que o ícone e texto fiquem vermelhos no erro */
-        .input-wrapper.error-shake svg.icon-left,
-        .input-wrapper.error-shake input {
-            color: #EF4444;
-            fill: #EF4444;
+        [data-theme="dark"] body {
+            background-color: var(--bg-body);
+            color: var(--text-main);
         }
 
-
-        /* --- 2. ESTILO DO SUBTÍTULO ("Dados atualizados") --- */
-        /* Substitui o estilo antigo do .date-sub-text */
-        .date-sub-text {
-            display: inline-block;
-            /* Necessário para o padding funcionar bem */
-            margin-top: 1px;
-            font-size: 12px;
-            font-weight: 600;
-            color: #047857;
-            /* Verde mais profissional */
-            background-color: #ECFDF5;
-            /* Fundo verde bem claro */
-            padding: 2px 1px;
-            border-radius: 20px;
-            /* Bordas bem redondas (estilo pílula) */
-
-            /* Sombreado suave e elegante */
-            box-shadow: 0 2px 6px rgba(4, 120, 87, 0.15),
-                inset 0 1px 1px rgba(255, 255, 255, 0.8);
-
-            letter-spacing: 0.5px;
-            text-transform: uppercase;
-            transition: all 0.3s ease;
+        [data-theme="dark"] .sidebar {
+            background: #1f2937;
+            border-right-color: var(--border);
         }
 
-        /* Efeito opcional ao passar o mouse sobre a área da data */
-        .date-center-display:hover .date-sub-text {
-            background-color: #D1FAE5;
-            transform: translateY(-1px);
-        }
-
-        /* Fundo Escuro do Modal (Centraliza tudo) */
-        .modal-overlay-calendar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.6);
-            /* Fundo escurecido */
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-            /* Garante que fique acima de tudo */
-
-            /* Estado inicial: Escondido */
-            opacity: 0;
-            visibility: hidden;
-            transition: all 0.3s ease;
-            backdrop-filter: blur(2px);
-            /* Efeito de desfoque no fundo */
-        }
-
-        /* Quando o JS adiciona a classe .active, o modal aparece */
-        .modal-overlay-calendar.active {
-            opacity: 1;
-            visibility: visible;
-        }
-
-        /* O "Cartão" Branco do Calendário */
-        .calendar-wrapper {
-            background: #fff;
-            width: 380px;
-            border-radius: 16px;
-            padding: 25px;
-            position: relative;
-            border: 1px solid #D1D5DB;
-            box-shadow:
-                0 20px 25px -5px rgba(0, 0, 0, 0.25),
-                0 10px 10px -5px rgba(0, 0, 0, 0.15),
-                inset 0 1px 0 rgba(255, 255, 255, 1);
-        }
-
-        /* Botão Fechar (X) */
-        .close-btn-cal {
-            position: absolute;
-            top: 15px;
-            right: 15px;
-            background: none;
-            border: none;
-            font-size: 18px;
-            color: #9CA3AF;
-            cursor: pointer;
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: background 0.2s;
-        }
-
-        .close-btn-cal:hover {
-            background: #F3F4F6;
-            color: #EF4444;
-        }
-
-        /* --- HEADER DO CALENDÁRIO (Mês e Ano) --- */
-        .cal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            padding-right: 20px;
-            /* Espaço para o botão fechar não sobrepor */
-        }
-
-        .month-nav-wrapper {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .nav-btn-cal {
-            background: none;
-            border: 1px solid #E5E7EB;
-            border-radius: 8px;
-            width: 32px;
-            height: 32px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            color: #4B5563;
-            transition: all 0.2s;
-        }
-
-        .nav-btn-cal:hover {
-            background: #E30613;
+        [data-theme="dark"] .brand {
             color: white;
-            border-color: #E30613;
         }
 
-        /* Ajuste fino nos botões de navegação lateral */
-        .nav-btn {
-            background: #efeff0;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            width: 36px;
-            height: 36px;
-            cursor: pointer;
-            color: var(--secondary);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-            transition: all 0.2s ease;
+        [data-theme="dark"] .brand span {
+            color: var(--primary);
         }
 
-        .nav-btn:hover {
+        [data-theme="dark"] .nav-item {
+            color: #9ca3af;
+        }
+
+        [data-theme="dark"] .nav-item:hover,
+        [data-theme="dark"] .nav-item.active {
+            background-color: rgba(227, 6, 19, 0.1);
+            color: var(--primary);
+        }
+
+        [data-theme="dark"] .page-title h1 {
+            color: white;
+        }
+
+        [data-theme="dark"] .page-title p {
+            color: #9ca3af;
+        }
+
+        [data-theme="dark"] .btn-export {
+            background: #1f2937;
+            border-color: var(--border);
+            color: white;
+        }
+
+        [data-theme="dark"] .btn-export:hover {
             border-color: var(--primary);
             color: var(--primary);
-            background-color: #fff;
-            transform: scale(1.1);
         }
 
-        /* Garante que o container de data não quebre linha */
-        .date-display {
-            flex: 1;
-            user-select: none;
+        [data-theme="dark"] .user-profile-trigger {
+            background: #1f2937;
+            border-color: var(--border);
         }
 
-        /* Estilo do Calendário Expandido (Modal) */
-        .calendar-day-btn.active {
-            background-color: var(--primary) !important;
-            color: white !important;
-            box-shadow: 0 4px 10px rgba(227, 6, 19, 0.3);
+        [data-theme="dark"] .user-name {
+            color: white;
         }
 
-        .calendar-day-btn:hover:not(.empty):not(.active) {
-            background-color: var(--primary-light);
+        [data-theme="dark"] .user-role {
+            color: #9ca3af;
+        }
+
+        [data-theme="dark"] .user-avatar {
+            background: var(--primary);
+            color: white;
+        }
+
+        [data-theme="dark"] .instructor-card {
+            background: #1f2937;
+            border-color: var(--border);
+        }
+
+        [data-theme="dark"] .detail-row {
+            border-bottom-color: var(--border);
+        }
+
+        [data-theme="dark"] .detail-label {
+            color: #9ca3af;
+        }
+
+        [data-theme="dark"] .detail-value {
+            color: white;
+        }
+
+        [data-theme="dark"] .btn-close-card {
+            background: #374151;
+            color: #9ca3af;
+        }
+
+        [data-theme="dark"] .card {
+            background: #1f2937;
+            border-color: var(--border);
+        }
+
+        [data-theme="dark"] .card:hover {
+            border-color: var(--primary);
+        }
+
+        [data-theme="dark"] .kpi-header {
+            color: #9ca3af;
+        }
+
+        [data-theme="dark"] .kpi-value {
+            color: white;
+        }
+
+        [data-theme="dark"] .badge.up {
+            background: #065f46;
+            color: #6ee7b7;
+            border-color: #047857;
+        }
+
+        [data-theme="dark"] .badge.down {
+            background: #7f1d1d;
+            color: #fca5a5;
+            border-color: #b91c1c;
+        }
+
+        [data-theme="dark"] .status-badge {
+            color: white;
+        }
+
+        [data-theme="dark"] .status-critico {
+            background: #7f1d1d;
+            color: #fecaca;
+            border-color: #b91c1c;
+        }
+
+        [data-theme="dark"] .status-alto {
+            background: #7c2d12;
+            color: #fed7aa;
+            border-color: #9a3412;
+        }
+
+        [data-theme="dark"] .status-moderado {
+            background: #713f12;
+            color: #fef08a;
+            border-color: #854d0e;
+        }
+
+        [data-theme="dark"] .status-baixo {
+            background: #14532d;
+            color: #bbf7d0;
+            border-color: #166534;
+        }
+
+        [data-theme="dark"] .section-title {
+            color: white;
+        }
+
+        [data-theme="dark"] .calendar-nav {
+            background: #1f2937;
+            border-color: var(--border);
+        }
+
+        [data-theme="dark"] .nav-btn {
+            background: #374151;
+            border-color: var(--border);
+            color: white;
+        }
+
+        [data-theme="dark"] .nav-btn:hover {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+
+        [data-theme="dark"] #displayDayNum {
             color: var(--primary);
         }
 
-        .selector-display {
-            font-weight: 700;
-            font-size: 16px;
-            color: #1F2937;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 5px;
+        [data-theme="dark"] #displayMonthStr {
+            color: #9ca3af;
         }
 
-        /* --- CORPO DO CALENDÁRIO (DIAS) --- */
-        .calendar-body .weeks {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);
-            /* 7 Colunas iguais */
-            list-style: none;
-            margin-bottom: 10px;
-            border-bottom: 1px solid #F3F4F6;
-            padding-bottom: 10px;
+        [data-theme="dark"] .occurrence-item {
+            border-bottom-color: var(--border);
         }
 
-        .calendar-body .weeks li {
-            font-weight: 600;
-            font-size: 13px;
-            color: #9CA3AF;
-            text-align: center;
+        [data-theme="dark"] .occ-avatar {
+            background: #374151;
+            color: white;
         }
 
-        .calendar-body .days {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);
-            /* 7 Colunas iguais */
-            list-style: none;
-            gap: 5px;
-            /* Espaço entre os dias */
+        [data-theme="dark"] .occ-name {
+            color: white;
         }
 
-        .calendar-body .days li {
-            height: 40px;
-            /* Altura do botão do dia */
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            font-size: 14px;
-            color: #374151;
-            border-radius: 50%;
-            /* Bolinha redonda */
-            position: relative;
-            transition: all 0.2s;
+        [data-theme="dark"] .occ-desc {
+            color: #9ca3af;
         }
 
-        /* Dias Inativos (mês passado/futuro) */
-        .days li.inactive {
-            color: #D1D5DB;
-            pointer-events: none;
+        [data-theme="dark"] .occ-time {
+            background: rgba(227, 6, 19, 0.2);
+            color: #fca5a5;
+            border-color: var(--border);
         }
 
-        /* Dia HOJE */
-        .days li.today {
-            color: #E30613;
-            font-weight: bold;
-            background: #FEF2F2;
+        [data-theme="dark"] .list-item {
+            border-bottom-color: var(--border);
         }
 
-        /* Dia SELECIONADO */
-        .days li.active {
-            background: #E30613;
-            color: #fff;
-            font-weight: bold;
+        [data-theme="dark"] .list-item span {
+            color: white;
         }
 
-        .days li:not(.active):not(.inactive):hover {
-            background: #F3F4F6;
+        [data-theme="dark"] .progress-bar {
+            background: #374151;
         }
 
-        /* --- INPUT MANUAL (Rodapé do calendário) --- */
-        .input-area {
-            margin-top: 20px;
-            padding-top: 15px;
-            border-top: 1px solid #E5E7EB;
+        [data-theme="dark"] a {
+            color: #9ca3af;
         }
 
-        .input-wrapper {
-            display: flex;
-            align-items: center;
-            background: #F9FAFB;
-            border: 1px solid #E5E7EB;
-            border-radius: 8px;
-            padding: 8px 12px;
+        [data-theme="dark"] a:hover {
+            color: var(--primary);
         }
 
-        .input-wrapper:focus-within {
-            border-color: #E30613;
-            box-shadow: 0 0 0 2px rgba(227, 6, 19, 0.1);
+        /* Modal de detalhes no modo escuro */
+        [data-theme="dark"] .modal-overlay {
+            background: rgba(0, 0, 0, 0.8);
         }
 
-        .icon-left {
-            width: 20px;
-            height: 20px;
-            fill: #9CA3AF;
-            margin-right: 10px;
+        [data-theme="dark"] .modal-container {
+            background: #1f2937;
+            border-color: var(--border);
         }
 
-        .input-wrapper input {
-            border: none;
-            background: none;
-            outline: none;
-            width: 100%;
-            font-size: 14px;
-            color: #374151;
+        [data-theme="dark"] .modal-header {
+            border-bottom-color: var(--border);
         }
 
-        /* --- BOTÃO QUADRADO ARREDONDADO (LUPA) --- */
-
-        /* --- BOTÃO QUADRADO COM SOMBREADO LEVE --- */
-
-        /* --- BOTÃO QUADRADO COM SOMBRA FORTE E APARENTE --- */
-
-        .btn-action-right {
-            background: #F3F4F6;
-            border: 1px solid #D1D5DB;
-            border-radius: 8px;
-            width: 32px;
-            /* Tamanho fixo menor */
-            height: 32px;
-            /* Tamanho fixo menor */
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            margin-left: 5px;
-            padding: 0 !important;
-            /* Remove qualquer padding que o dashboard.css aplique */
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-            transition: all 0.2s;
-            flex-shrink: 0;
-            /* Impede que o botão amasse */
+        [data-theme="dark"] .modal-title h2 {
+            color: white;
         }
 
-        /* Ajuste o ícone dentro dele */
-        .btn-action-right svg {
-            width: 16px !important;
-            height: 16px !important;
-            stroke-width: 2.5px;
+        [data-theme="dark"] .modal-title span {
+            color: var(--primary);
         }
 
-        /* Efeito ao passar o mouse (Hover) */
-        .btn-action-right:hover {
-            background: #FFFFFF;
-            border-color: #9CA3AF;
-            transform: translateY(-2px);
-            /* Pula um pouco mais alto */
-
-            /* Sombra fica mais intensa no hover */
-            box-shadow:
-                0 10px 15px -3px rgba(0, 0, 0, 0.2),
-                0 4px 6px -2px rgba(0, 0, 0, 0.1);
+        [data-theme="dark"] .btn-close-modal {
+            color: #9ca3af;
         }
 
-        .btn-action-right:hover svg {
-            stroke: #E30613;
-            /* Lupa brilha em vermelho */
-            transform: scale(1.1);
-            /* Lupa aumenta levemente */
+        [data-theme="dark"] .btn-close-modal:hover {
+            color: var(--primary);
         }
 
-        /* Efeito de clique (Botão afunda e a sombra inverte) */
-        .btn-action-right:active {
-            transform: translateY(1px);
-            box-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.2);
-            /* Sombra interna forte */
-            background: #E5E7EB;
+        [data-theme="dark"] .custom-table th {
+            background: #374151;
+            color: #9ca3af;
         }
 
-        /* --- DROPDOWNS DO CALENDÁRIO (SELETORES) --- */
-
-        .selector-container {
-            position: relative;
-            /* Necessário para o dropdown flutuar relativo a este botão */
+        [data-theme="dark"] .custom-table td {
+            color: white;
+            border-bottom-color: var(--border);
         }
 
-        .selector-dropdown {
-            position: absolute;
-            top: 100%;
-            /* Logo abaixo do texto */
-            left: 50%;
-            transform: translateX(-50%);
+        [data-theme="dark"] .custom-table tr:hover {
+            background-color: #374151;
+        }
+
+        [data-theme="dark"] .btn-modal-action {
+            background: #374151;
+            color: white;
+        }
+
+        [data-theme="dark"] .btn-modal-action:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        /* Calendário modal no modo escuro */
+        [data-theme="dark"] .modal-overlay-calendar {
+            background: rgba(0, 0, 0, 0.8);
+        }
+
+        [data-theme="dark"] .calendar-wrapper {
+            background: #1f2937;
+            border-color: var(--border);
+        }
+
+        [data-theme="dark"] .close-btn-cal {
+            color: #9ca3af;
+        }
+
+        [data-theme="dark"] .close-btn-cal:hover {
+            background: #374151;
+            color: var(--primary);
+        }
+
+        [data-theme="dark"] .selector-display {
+            color: white;
+        }
+
+        [data-theme="dark"] .selector-dropdown {
+            background: #1f2937;
+            border-color: var(--border);
+        }
+
+        [data-theme="dark"] .dropdown-item {
+            color: white;
+        }
+
+        [data-theme="dark"] .dropdown-item:hover {
+            background-color: #374151;
+            color: var(--primary);
+        }
+
+        [data-theme="dark"] .calendar-body .weeks li {
+            color: #9ca3af;
+        }
+
+        [data-theme="dark"] .calendar-body .days li {
+            color: white;
+        }
+
+        [data-theme="dark"] .days li.today {
+            background: rgba(227, 6, 19, 0.2);
+            color: #fca5a5;
+        }
+
+        [data-theme="dark"] .days li.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        [data-theme="dark"] .days li:not(.active):not(.inactive):hover {
+            background: #374151;
+        }
+
+        [data-theme="dark"] .days li.inactive {
+            color: #6b7280;
+        }
+
+        [data-theme="dark"] .input-wrapper {
+            background: #374151;
+            border-color: var(--border);
+        }
+
+        [data-theme="dark"] .input-wrapper input {
+            color: white;
+        }
+
+        [data-theme="dark"] .input-wrapper input::placeholder {
+            color: #9ca3af;
+        }
+
+        [data-theme="dark"] .btn-action-right {
+            background: #4b5563;
+            border-color: var(--border);
+        }
+
+        [data-theme="dark"] .btn-action-right:hover {
             background: white;
-            border: 1px solid #E5E7EB;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-            padding: 5px;
-            z-index: 50;
-            min-width: 120px;
-            max-height: 200px;
-            overflow-y: auto;
-            /* Barra de rolagem se for muito longo */
-
-            /* Escondido por padrão */
-            display: none;
         }
 
-        .selector-dropdown.active {
-            display: block;
-            /* Aparece quando tem a classe active */
+        [data-theme="dark"] .btn-action-right:hover svg {
+            stroke: var(--primary);
         }
 
-        .dropdown-item {
-            padding: 8px 12px;
-            font-size: 13px;
-            color: #374151;
+        /* Ranking modal no modo escuro */
+        [data-theme="dark"] .modal-ranking-overlay {
+            background: rgba(0, 0, 0, 0.8);
+        }
+
+        [data-theme="dark"] .modal-ranking-square {
+            background: #1f2937;
+            border-color: var(--border);
+        }
+
+        [data-theme="dark"] .modal-ranking-header {
+            background: #1f2937;
+            border-bottom-color: var(--border);
+        }
+
+        [data-theme="dark"] .modal-ranking-header h2 {
+            color: white;
+        }
+
+        [data-theme="dark"] .ranking-table th {
+            background: #1f2937;
+            color: #9ca3af;
+        }
+
+        [data-theme="dark"] .ranking-row td {
+            background: #374151;
+            color: white;
+        }
+
+        [data-theme="dark"] .ranking-row:hover td {
+            background: #4b5563 !important;
+        }
+
+        [data-theme="dark"] .badge-count {
+            background: rgba(227, 6, 19, 0.2);
+            color: #fca5a5;
+        }
+
+        /* Notificações no modo escuro */
+        [data-theme="dark"] .toast {
+            background: #1f2937;
+            border-left-color: var(--primary);
+        }
+
+        [data-theme="dark"] .toast-icon {
+            background: rgba(227, 6, 19, 0.2);
+            color: #fca5a5;
+        }
+
+        [data-theme="dark"] .toast-title {
+            color: white;
+        }
+
+        [data-theme="dark"] .toast-message {
+            color: #9ca3af;
+        }
+
+        [data-theme="dark"] .toast-message b {
+            color: white;
+        }
+
+        [data-theme="dark"] .toast-time {
+            color: #fca5a5;
+        }
+
+        /* Ajustes para gráficos no modo escuro */
+        [data-theme="dark"] canvas {
+            filter: brightness(1.1);
+        }
+
+        [data-theme="dark"] .empty-state {
+            color: #9ca3af !important;
+        }
+
+        .card.clickable {
             cursor: pointer;
-            border-radius: 4px;
-            transition: background 0.2s;
-            text-align: center;
         }
 
-        .dropdown-item:hover {
-            background-color: #F3F4F6;
-            color: #E30613;
-        }
-
-        .dropdown-item.selected {
-            background-color: #FEF2F2;
-            color: #E30613;
-            font-weight: bold;
-        }
-
-        .calendar-nav {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 15px;
-            background: #f8fafc;
-            padding: 8px;
-            border-radius: 8px;
-            border: none
-                /* Box Shadow: Horizontal, Vertical, Desfoque, Espalhamento, Cor */
-                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
-                0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        }
-
-        /* Animação de pulo e brilho vermelho */
-        /* Animação de chacoalhada (Shake) */
-
-        .shake-attention {
-            animation: shake-red 0.6s cubic-bezier(.36, .07, .19, .97) both;
-            box-shadow: 0 0 15px rgba(227, 6, 19, 0.4);
-            z-index: 10;
-            /* Garante que fique acima de outros elementos ao tremer */
-        }
-
-        /* Container do Modal */
-        .modal-ranking-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(15, 23, 42, 0.7);
-            z-index: 99999;
-            justify-content: center;
-            align-items: center;
-            backdrop-filter: blur(8px);
-            animation: fadeIn 0.3s ease;
-        }
-
-        /* O Quadrado Centralizado */
-        .modal-ranking-square {
-            background: white;
-            width: 500px;
-            height: 500px;
-            border-radius: 20px;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        /* Cabeçalho */
-        .modal-ranking-header {
-            padding: 24px;
-            background: #ffffff;
-            border-bottom: 1px solid #f1f5f9;
-        }
-
-        .modal-ranking-header h2 {
-            margin: 0;
-            font-size: 1.25rem;
-            color: #1e293b;
-        }
-
-        /* Tabela e Scroll */
-        .modal-ranking-body {
-            flex: 1;
-            overflow-y: auto;
-            padding: 10px 20px;
-        }
-
-        /* Customização da Barra de Rolagem (Scrollbar) */
-        .modal-ranking-body::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        .modal-ranking-body::-webkit-scrollbar-thumb {
-            border-radius: 10px;
-        }
-
-        /* Estilo da Tabela */
-        .ranking-table {
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 0 8px;
-        }
-
-        .ranking-table th {
-            position: sticky;
-            top: 0;
-            background: white;
-            padding: 10px;
-            font-size: 11px;
-            text-transform: uppercase;
-            color: #94a3b8;
-            z-index: 10;
-        }
-
-        .ranking-row {
-            transition: all 0.2s ease;
-        }
-
-        /* Efeito Hover nas Linhas */
-        .ranking-row:hover {
-            transform: translateX(5px);
-        }
-
-        .ranking-row:hover td {
-            background: #f8fafc !important;
-        }
-
-        .ranking-row td {
-            padding: 12px 15px;
-            font-size: 14px;
-            background: #ffffff;
-        }
-
-        /* Arredondar pontas das linhas para o efeito de card */
-        .ranking-row td:first-child {
-            border-radius: 10px 0 0 10px;
-            font-weight: 700;
-            color: #94a3b8;
-        }
-
-        .ranking-row td:last-child {
-            border-radius: 0 10px 10px 0;
-            text-align: right;
-        }
-
-        /* Badge de Ocorrências */
-        .badge-count {
-            background: #fee2e2;
-            color: #ef4444;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-weight: 800;
-            font-size: 12px;
-        }
-
-        /* Animação */
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: scale(0.45);
-            }
-
-            to {
-                opacity: 0;
-                transform: scale(1);
-            }
-        }
-
-        /* Estilo Base para os Novos Status */
-        .status-badge {
-            display: inline-flex;
-            align-items: center;
-            padding: 4px 10px;
-            border-radius: 6px;
-            font-size: 11px;
-            font-weight: 800;
-            letter-spacing: 0.5px;
-            margin-left: 8px;
-            vertical-align: middle;
-        }
-
-        /* Cores específicas para cada nível */
-        .status-critico {
-            background-color: #fee2e2;
-            color: #dc2626;
-            border: 1px solid #fecaca;
-        }
-
-        .status-alto {
-            background-color: #ffedd5;
-            color: #ea580c;
-            border: 1px solid #fed7aa;
-        }
-
-        .status-moderado {
-            background-color: #fef9c3;
-            color: #a16207;
-            border: 1px solid #fef08a;
-        }
-
-        .status-baixo {
-            background-color: #dcfce7;
-            color: #16a34a;
-            border: 1px solid #bbf7d0;
+        .card.clickable:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 35px -10px rgba(227, 6, 19, 0.15), 0 10px 20px -5px rgba(0, 0, 0, 0.1);
+            border-color: rgba(255, 0, 17, 0.473);
         }
     </style>
 </head>
@@ -767,10 +602,6 @@ $rankingModal = $stmtRankingModal->fetchAll(PDO::FETCH_ASSOC);
             <a class="nav-item" href="configuracoes.php">
                 <i data-lucide="settings"></i>
                 <span>Configurações</span>
-            </a>
-            <a class="nav-item" href="monitoramento.php">
-                <i data-lucide="monitor"></i>
-                <span>Monitoramento</span>
             </a>
 
         </nav>
@@ -868,7 +699,7 @@ $rankingModal = $stmtRankingModal->fetchAll(PDO::FETCH_ASSOC);
         </div>
         <div class="card" style="height: 380px; display: flex; flex-direction: column;">
             <div class="section-header">
-                <span class="section-title">Infraçoes de EPIs (Anual)</span>
+                <span class="section-title">Infrações de EPIs (Anual)</span>
             </div>
             <div style="flex: 1; position: relative;">
                 <canvas id="mainChart"></canvas>
@@ -1114,10 +945,122 @@ $rankingModal = $stmtRankingModal->fetchAll(PDO::FETCH_ASSOC);
     <div id="notification-container"></div>
 
     <script src="https://unpkg.com/lucide@latest"></script>
-    <script>
-        lucide.createIcons();
-    </script>
+    <script src="../js/chart-manager.js"></script>
     <script src="../js/dashboard.js"></script>
+    <script>
+        // Inicializa ícones do Lucide
+        lucide.createIcons();
+
+        // Aplicar tema salvo ao carregar a página
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'dark') {
+                document.body.setAttribute('data-theme', 'dark');
+            }
+            
+            // Verificar estado do link nos cards
+            const linksEnabled = localStorage.getItem('linksEnabled') === 'true';
+            if (linksEnabled) {
+                document.querySelectorAll('.card').forEach(c => c.classList.add('clickable'));
+            }
+            
+            // Carregar cor do gráfico
+            const chartColor = localStorage.getItem('chartColor') || '#E30613';
+            document.documentElement.style.setProperty('--chart-main-color', chartColor);
+        });
+
+        // Observer para mudanças no localStorage (sincronizar entre abas)
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'theme' || e.key === 'theme_trigger') {
+                const currentTheme = localStorage.getItem('theme');
+                if (currentTheme === 'dark') {
+                    document.body.setAttribute('data-theme', 'dark');
+                } else {
+                    document.body.removeAttribute('data-theme');
+                }
+            }
+            
+            if (e.key === 'linksEnabled') {
+                const enabled = localStorage.getItem('linksEnabled') === 'true';
+                document.querySelectorAll('.card').forEach(card => {
+                    if (enabled) {
+                        card.classList.add('clickable');
+                    } else {
+                        card.classList.remove('clickable');
+                    }
+                });
+            }
+            
+            if (e.key === 'chartColor') {
+                document.documentElement.style.setProperty('--chart-main-color', e.newValue);
+            }
+        });
+
+        // Função para alternar tema (será chamada pela página de configurações)
+        window.toggleTheme = function() {
+            const isDark = document.body.getAttribute('data-theme') === 'dark';
+            const newTheme = isDark ? 'light' : 'dark';
+            
+            if (newTheme === 'dark') {
+                document.body.setAttribute('data-theme', 'dark');
+            } else {
+                document.body.removeAttribute('data-theme');
+            }
+            
+            localStorage.setItem('theme', newTheme);
+        }
+
+        // Função para alternar links nos cards
+        window.toggleLinkAbility = function() {
+            const enabled = localStorage.getItem('linksEnabled') === 'true';
+            document.querySelectorAll('.card').forEach(card => {
+                if (enabled) {
+                    card.classList.add('clickable');
+                } else {
+                    card.classList.remove('clickable');
+                }
+            });
+        }
+
+        // Função para manipular clique nos cards
+        window.handleCardClick = function(cardElement) {
+            const linksEnabled = localStorage.getItem('linksEnabled') === 'true';
+            if (linksEnabled) {
+                const header = cardElement.querySelector('.kpi-header');
+                if (header) {
+                    const cardType = header.textContent.includes('Diarias') ? 'dia' :
+                                    header.textContent.includes('Semanais') ? 'semana' :
+                                    header.textContent.includes('Mês') ? 'mes' : 'conformidade';
+                    
+                    if (cardType !== 'conformidade') {
+                        highlightDaily(cardType);
+                    }
+                }
+            }
+        }
+
+        // Adicionar event listeners aos cards
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.card').forEach(card => {
+                card.addEventListener('click', function(e) {
+                    window.handleCardClick(this);
+                });
+            });
+        });
+    </script>
+
+    <script>
+    // Sincroniza a cor de destaque em todo o CSS do Dashboard
+    document.addEventListener('DOMContentLoaded', function() {
+        const corDestaque = localStorage.getItem('chartColor');
+        if (corDestaque) {
+            // Atualiza a variável de cor principal da interface
+            document.documentElement.style.setProperty('--primary', corDestaque);
+            document.documentElement.style.setProperty('--chart-main-color', corDestaque);
+        }
+    });
+</script>
+
 </body>
 
 </html>

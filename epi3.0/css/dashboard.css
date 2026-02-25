@@ -147,7 +147,85 @@ body {
     color: var(--primary);
     font-weight: 700;
 }
+/* =========================================
+   CONTÊUDO DO MODO DARK
+   ========================================= */
+   /* =========================================
+   VARIÁVEIS DE TEMA
+   ========================================= */
+:root {
+    /* TEMA CLARO (padrão) */
+    --primary: #E30613;
+    --primary-dark: #bf040f;
+    --primary-light: rgba(227, 6, 19, 0.1);
+    --secondary: #1F2937;
+    --text-main: #111827;
+    --text-muted: #64748B;
+    --bg-body: #e6e8ec;
+    --bg-card: #ebebeb;
+    --border: #CBD5E1;
+    --success: #10B981;
+    --danger: #EF4444;
+    
+    /* Cores para badges e status - mantém as mesmas no tema escuro */
+    --badge-up-bg: #DCFCE7;
+    --badge-up-text: #166534;
+    --badge-up-border: #bbf7d0;
+    --badge-down-bg: #FEE2E2;
+    --badge-down-text: #991B1B;
+    --badge-down-border: #fecaca;
+    
+    /* Cores dos status badges */
+    --status-critico-bg: #fee2e2;
+    --status-critico-text: #dc2626;
+    --status-critico-border: #fecaca;
+    --status-alto-bg: #ffedd5;
+    --status-alto-text: #ea580c;
+    --status-alto-border: #fed7aa;
+    --status-moderado-bg: #fef9c3;
+    --status-moderado-text: #a16207;
+    --status-moderado-border: #fef08a;
+    --status-baixo-bg: #dcfce7;
+    --status-baixo-text: #16a34a;
+    --status-baixo-border: #bbf7d0;
+}
 
+/* TEMA ESCURO */
+[data-theme="dark"] {
+    --primary: #ff4d4d;
+    --primary-dark: #e63939;
+    --primary-light: rgba(255, 77, 77, 0.15);
+    --secondary: #E5E7EB;
+    --text-main: #F3F4F6;
+    --text-muted: #9CA3AF;
+    --bg-body: #1a1e24;
+    --bg-card: #2d3748;
+    --border: #4B5563;
+    --success: #34D399;
+    --danger: #F87171;
+    
+    /* Badges mantêm contraste no tema escuro */
+    --badge-up-bg: #064e3b;
+    --badge-up-text: #6ee7b7;
+    --badge-up-border: #065f46;
+    --badge-down-bg: #7f1d1d;
+    --badge-down-text: #fca5a5;
+    --badge-down-border: #991b1b;
+    
+    /* Status badges adaptados para tema escuro */
+    --status-critico-bg: #7f1d1d;
+    --status-critico-text: #fecaca;
+    --status-critico-border: #991b1b;
+    --status-alto-bg: #7c2d12;
+    --status-alto-text: #fed7aa;
+    --status-alto-border: #9a3412;
+    --status-moderado-bg: #713f12;
+    --status-moderado-text: #fef08a;
+    --status-moderado-border: #854d0e;
+    --status-baixo-bg: #14532d;
+    --status-baixo-text: #bbf7d0;
+    --status-baixo-border: #166534;
+}
 /* =========================================
    CONTEÚDO PRINCIPAL (MAIN)
    ========================================= */
@@ -379,15 +457,15 @@ body {
 }
 
 .badge.up {
-    background: #DCFCE7;
-    color: #166534;
-    border: 1px solid #bbf7d0;
+    background: var(--badge-up-bg);
+    color: var(--badge-up-text);
+    border: 1px solid var(--badge-up-border);
 }
 
 .badge.down {
-    background: #FEE2E2;
-    color: #991B1B;
-    border: 1px solid #fecaca;
+    background: var(--badge-down-bg);
+    color: var(--badge-down-text);
+    border: 1px solid var(--badge-down-border);
 }
 
 /* Chart Grid Layout */
@@ -1417,29 +1495,28 @@ body {
 
 /* Cores específicas para cada nível */
 .status-critico {
-    background-color: #fee2e2;
-    color: #dc2626;
-    border: 1px solid #fecaca;
+    background-color: var(--status-critico-bg);
+    color: var(--status-critico-text);
+    border: 1px solid var(--status-critico-border);
 }
 
 .status-alto {
-    background-color: #ffedd5;
-    color: #ea580c;
-    border: 1px solid #fed7aa;
+    background-color: var(--status-alto-bg);
+    color: var(--status-alto-text);
+    border: 1px solid var(--status-alto-border);
 }
 
 .status-moderado {
-    background-color: #fef9c3;
-    color: #a16207;
-    border: 1px solid #fef08a;
+    background-color: var(--status-moderado-bg);
+    color: var(--status-moderado-text);
+    border: 1px solid var(--status-moderado-border);
 }
 
 .status-baixo {
-    background-color: #dcfce7;
-    color: #16a34a;
-    border: 1px solid #bbf7d0;
+    background-color: var(--status-baixo-bg);
+    color: var(--status-baixo-text);
+    border: 1px solid var(--status-baixo-border);
 }
-
 
 /* --- SISTEMA DE NOTIFICAÇÃO (TOAST) --- */
 #notification-container {
@@ -1527,4 +1604,95 @@ body {
 
 @keyframes slideOutRight {
     to { transform: translateX(120%); opacity: 0; }
+}
+
+
+[data-theme="dark"] .input-wrapper {
+    background: #374151;
+    border-color: #4B5563;
+}
+
+[data-theme="dark"] .input-wrapper input {
+    color: #F3F4F6;
+    background: transparent;
+}
+
+[data-theme="dark"] .input-wrapper input::placeholder {
+    color: #9CA3AF;
+}
+
+[data-theme="dark"] .selector-dropdown {
+    background: #2d3748;
+    border-color: #4B5563;
+}
+
+[data-theme="dark"] .dropdown-item {
+    color: #E5E7EB;
+}
+
+[data-theme="dark"] .dropdown-item:hover {
+    background-color: #374151;
+}
+
+[data-theme="dark"] .calendar-wrapper {
+    background: #2d3748;
+    border-color: #4B5563;
+}
+
+[data-theme="dark"] .modal-ranking-square {
+    background: #2d3748;
+}
+
+[data-theme="dark"] .modal-ranking-header {
+    background: #2d3748;
+    border-color: #4B5563;
+}
+
+[data-theme="dark"] .ranking-table th {
+    background: #2d3748;
+    color: #9CA3AF;
+}
+
+[data-theme="dark"] .ranking-row td {
+    background: #374151;
+    color: #E5E7EB;
+}
+
+[data-theme="dark"] .btn-export {
+    background: #374151;
+    border-color: #4B5563;
+    color: #E5E7EB;
+}
+
+[data-theme="dark"] .user-profile-trigger {
+    background: #374151;
+}
+
+[data-theme="dark"] .modal-container {
+    background: #2d3748;
+    border-color: #4B5563;
+}
+
+[data-theme="dark"] .custom-table th {
+    background: #374151;
+    color: #9CA3AF;
+}
+
+[data-theme="dark"] .custom-table td {
+    color: #E5E7EB;
+    border-color: #4B5563;
+}
+
+[data-theme="dark"] .custom-table tr:hover {
+    background-color: #374151;
+}
+
+.card.clickable {
+    cursor: pointer;
+}
+
+.card.clickable:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 35px -10px rgba(227, 6, 19, 0.15), 0 10px 20px -5px rgba(0, 0, 0, 0.1);
+    border-color: rgba(255, 0, 17, 0.473);
 }

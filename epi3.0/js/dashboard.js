@@ -1,45 +1,55 @@
 // =============================================================
-// DASHBOARD.JS - VERSÃO UNIFICADA (SUA LÓGICA + CALENDÁRIO VISUAL)
+// DASHBOARD.JS - VERSÃO DEFINITIVA COM CORES AUTOMÁTICAS
 // =============================================================
 
 // --- VARIÁVEIS GLOBAIS ---
-let selectedDate = new Date(); // Data usada no Dashboard
-let currCalYear = new Date().getFullYear(); // Ano visualizado no Modal de Escolha de Data
-let currCalMonth = new Date().getMonth();   // Mês visualizado no Modal de Escolha de Data
-let allOccurrences = []; // Dados do BD
+let selectedDate = new Date(); 
+let currCalYear = new Date().getFullYear(); 
+let currCalMonth = new Date().getMonth();   
+let allOccurrences = []; 
 
-// Arrays auxiliares
+// Variáveis para armazenar as instâncias dos gráficos (ESSENCIAL PARA ATUALIZAR CORES)
+let mainChartInstance = null;
+let doughnutChartInstance = null;
+
 const monthsFull = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
 // --- INICIALIZAÇÃO ---
 document.addEventListener("DOMContentLoaded", function () {
-    loadCalendarData(); // Carrega dados da API
-    loadCharts();       // Carrega Gráficos
+    loadCalendarData(); 
 
-    // Listeners do Modal de ESCOLHA DE DATA (Calendário Visual)
+    // Inicializa os Gráficos
+    if (document.getElementById('mainChart')) {
+        const savedChartType = localStorage.getItem('preferredChartType') || 'bar';
+        loadChartData(savedChartType);
+    }
+
+    // Aplica a cor do CSS globalmente caso já exista uma salva
+    const savedColor = localStorage.getItem('chartColor');
+    if (savedColor) {
+        document.documentElement.style.setProperty('--primary', savedColor);
+        document.documentElement.style.setProperty('--chart-main-color', savedColor);
+    }
+
+    // Listeners do Modal
     const btnPrev = document.getElementById('prevMonth');
     const btnNext = document.getElementById('nextMonth');
     if (btnPrev) btnPrev.addEventListener('click', () => changeCalMonth(-1));
     if (btnNext) btnNext.addEventListener('click', () => changeCalMonth(1));
 
-    // Input Manual
     const input = document.getElementById('manualDateInput');
     if (input) {
         input.addEventListener('keydown', (e) => { if (e.key === 'Enter') commitManualDate(); });
         input.addEventListener('input', maskDateInput);
     }
 
-    // Fechar modais ao clicar fora
     document.addEventListener('click', (e) => {
-        // Modal Calendário
         const calModal = document.getElementById('calendarModal');
         if (calModal && e.target === calModal) toggleCalendar();
 
-        // Modal Detalhes (Gráfico)
         const detModal = document.getElementById('detailModal');
         if (detModal && e.target === detModal) detModal.classList.remove('open');
 
-        // Card Instrutor
         const card = document.getElementById('instructorCard');
         const trigger = document.getElementById('profileTrigger');
         if (card && trigger && !card.contains(e.target) && !trigger.contains(e.target)) {
@@ -48,12 +58,55 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 });
 
+// =============================================================
+// NOVO: SISTEMA DE ATUALIZAÇÃO AUTOMÁTICA DE CORES
+// =============================================================
+
+// Esta função injeta a nova cor DIRETAMENTE nos gráficos existentes e atualiza a tela
+function updateChartColorsDynamically(newColor) {
+    // 1. Atualiza a cor do Gráfico Anual (Barra/Linha)
+    if (mainChartInstance) {
+        // Altera a cor do dataset 'Capacete' (Índice 0)
+        mainChartInstance.data.datasets[0].backgroundColor = newColor;
+        mainChartInstance.data.datasets[0].borderColor = newColor;
+        mainChartInstance.data.datasets[0].pointBackgroundColor = newColor;
+        mainChartInstance.update(); // Manda o Chart.js redesenhar instantaneamente
+    }
+
+    // 2. Atualiza a cor do Gráfico de Rosca (EPI Menos Usado)
+    if (doughnutChartInstance) {
+        // Altera a cor do primeiro item do gráfico de rosca
+        doughnutChartInstance.data.datasets[0].backgroundColor[0] = newColor;
+        doughnutChartInstance.update(); // Redesenha instantaneamente
+    }
+
+    // 3. Atualiza as variáveis CSS para mudar o resto da interface do dashboard
+    document.documentElement.style.setProperty('--primary', newColor);
+    document.documentElement.style.setProperty('--chart-main-color', newColor);
+}
+
+// Ouve as mudanças no LocalStorage (Se o usuário mudar na aba de configurações, reflete na hora aqui)
+window.addEventListener('storage', function(e) {
+    if (e.key === 'chartColor' && e.newValue) {
+        updateChartColorsDynamically(e.newValue);
+    }
+});
+
+// Substitui a função do input color (caso a view seja na mesma página/SPA)
+document.addEventListener('input', function(e) {
+    if (e.target && e.target.id === 'chartColorPicker') {
+        const newColor = e.target.value;
+        localStorage.setItem('chartColor', newColor);
+        updateChartColorsDynamically(newColor);
+    }
+});
+
+
 // ===============================
-// 1. LÓGICA DE DADOS (API & UPDATE)
+// LÓGICA DE DADOS E INTERFACE GERAL
 // ===============================
 
 function loadCalendarData() {
-    // Pega o mês e ano da data SELECIONADA
     const month = selectedDate.getMonth() + 1;
     const year = selectedDate.getFullYear();
 
@@ -61,7 +114,7 @@ function loadCalendarData() {
         .then(res => res.json())
         .then(data => {
             allOccurrences = Array.isArray(data) ? data : [];
-            renderInterface(); // Atualiza tela
+            renderInterface(); 
         })
         .catch(err => {
             console.error('Erro calendário:', err);
@@ -70,16 +123,8 @@ function loadCalendarData() {
         });
 }
 
-// Renderiza a interface principal (Lista lateral, Texto data, KPIs)
-// =============================================================
-// SUBSTITUA A FUNÇÃO renderInterface POR ESTA VERSÃO CORRIGIDA:
-// =============================================================
-
 function renderInterface() {
-    // 1. Atualiza Texto da Data no Navegador
     const day = String(selectedDate.getDate()).padStart(2, '0');
-
-    // PEGANDO O MÊS COMPLETO:
     const monthFullStr = monthsFull[selectedDate.getMonth()];
     const yearStr = selectedDate.getFullYear();
 
@@ -87,12 +132,8 @@ function renderInterface() {
     const elStr = document.getElementById('displayMonthStr');
 
     if (elNum) elNum.innerText = day;
-
-    // AQUI ESTÁ O PULO DO GATO:
-    // Injetamos o nome completo (ex: Fevereiro) + o Ano
     if (elStr) elStr.innerText = `${monthFullStr} ${yearStr}`;
 
-    // 2. Filtra Ocorrências para a LISTA LATERAL
     const list = document.getElementById('occurrenceList');
     if (list) {
         list.innerHTML = '';
@@ -120,27 +161,21 @@ function renderInterface() {
         }
     }
 
-    // 3. Atualiza os KPIs
     updateKPICards();
     updatePercentagesDinamicamente();
 }
 
-// Botões Setas do Dashboard (❮ ❯)
 function changeDay(delta) {
     const oldMonth = selectedDate.getMonth();
     selectedDate.setDate(selectedDate.getDate() + delta);
     const newMonth = selectedDate.getMonth();
 
     if (oldMonth !== newMonth) {
-        loadCalendarData(); // Mudou mês? Chama PHP
+        loadCalendarData();
     } else {
-        renderInterface(); // Mesmo mês? Só filtra JS
+        renderInterface();
     }
 }
-
-// ===============================
-// 2. HELPERS (DATA & KPI)
-// ===============================
 
 function isSameDay(d1, d2) {
     return d1.getFullYear() === d2.getFullYear() &&
@@ -180,19 +215,13 @@ function updateKPICards() {
     if (elDia) elDia.innerText = countDay;
     if (elSemana) elSemana.innerText = countWeek;
     if (elMes) elMes.innerText = countMonth;
-
 }
-
-// ===============================
-// 3. MODAL VISUAL (SELETOR DE DATA)
-// ===============================
 
 function toggleCalendar() {
     const modal = document.getElementById('calendarModal');
-    if (!modal) return; // Segurança se não existir no HTML
+    if (!modal) return;
 
     if (!modal.classList.contains('active')) {
-        // Sincroniza visualização com a data atual selecionada
         currCalYear = selectedDate.getFullYear();
         currCalMonth = selectedDate.getMonth();
         renderCalendarGrid();
@@ -214,19 +243,16 @@ function renderCalendarGrid() {
     let lastDayofMonthIndex = new Date(currCalYear, currCalMonth, lastDateofMonth).getDay();
     let liTag = "";
 
-    // Dias mês anterior
     for (let i = firstDayofMonth; i > 0; i--) {
         liTag += `<li class="inactive">${new Date(currCalYear, currCalMonth, 0).getDate() - i + 1}</li>`;
     }
-    // Dias mês atual
     for (let i = 1; i <= lastDateofMonth; i++) {
         let isToday = i === new Date().getDate() && currCalMonth === new Date().getMonth() && currCalYear === new Date().getFullYear() ? "today" : "";
         let isSelected = i === selectedDate.getDate() && currCalMonth === selectedDate.getMonth() && currCalYear === selectedDate.getFullYear() ? "active" : "";
-        if (isSelected) isToday = ""; // Prioridade visual para seleção
+        if (isSelected) isToday = "";
 
         liTag += `<li class="${isToday} ${isSelected}" onclick="selectDayAndClose(${i})">${i}</li>`;
     }
-    // Dias próximo mês
     for (let i = lastDayofMonthIndex; i < 6; i++) {
         liTag += `<li class="inactive">${i - lastDayofMonthIndex + 1}</li>`;
     }
@@ -248,11 +274,10 @@ function changeCalMonth(delta) {
 
 function selectDayAndClose(day) {
     selectedDate = new Date(currCalYear, currCalMonth, day);
-    loadCalendarData(); // Chama PHP pois pode ter mudado o mês/ano
-    toggleCalendar();   // Fecha modal
+    loadCalendarData();
+    toggleCalendar();
 }
 
-// Input Manual
 function maskDateInput(e) {
     let v = e.target.value.replace(/\D/g, '');
     if (v.length > 2) v = v.slice(0, 2) + '/' + v.slice(2);
@@ -260,185 +285,40 @@ function maskDateInput(e) {
     e.target.value = v;
 }
 
-// =============================================================
-// SUBSTITUA A FUNÇÃO commitManualDate POR ESTA VERSÃO MELHORADA
-// E ADICIONE A FUNÇÃO triggerInputError LOGO ABAIXO DELA
-// =============================================================
-
 function commitManualDate() {
     const input = document.getElementById('manualDateInput');
     const v = input.value;
 
-    // 1. Validação básica de tamanho
-    if (v.length < 10) {
-        triggerInputError();
-        return;
-    }
+    if (v.length < 10) { triggerInputError(); return; }
 
     const day = parseInt(v.slice(0, 2), 10);
-    // Subtrai 1 porque o objeto Date usa meses de 0 a 11
     const monthIndex = parseInt(v.slice(3, 5), 10) - 1;
     const year = parseInt(v.slice(6, 10), 10);
 
-    // 2. Validação de Mês (deve ser entre 0 e 11)
-    if (monthIndex < 0 || monthIndex > 11 || isNaN(monthIndex)) {
-        triggerInputError();
-        return;
-    }
+    if (monthIndex < 0 || monthIndex > 11 || isNaN(monthIndex)) { triggerInputError(); return; }
 
-    // 3. Validação Inteligente de Dias (inclui Fevereiro e Bissextos)
-    // O dia '0' do próximo mês retorna o último dia do mês atual.
     const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
 
-    if (day < 1 || day > daysInMonth || isNaN(day)) {
-        // Ex: Se tentar dia 30 de Fevereiro, daysInMonth será 28 ou 29, e vai cair aqui.
-        triggerInputError();
-        return;
-    }
+    if (day < 1 || day > daysInMonth || isNaN(day)) { triggerInputError(); return; }
 
-    // Se passou por tudo, sucesso!
     currCalMonth = monthIndex;
     currCalYear = year;
     selectDayAndClose(day);
     input.value = "";
 }
 
-// --- FUNÇÃO AUXILIAR PARA A ANIMAÇÃO DE ERRO ---
 function triggerInputError() {
     const wrapper = document.querySelector('.input-wrapper');
-    // Adiciona a classe que faz chacoalhar
     wrapper.classList.add('error-shake');
-
-    // Remove a classe depois que a animação termina (400ms)
-    // para que possa chacoalhar de novo se clicar novamente
-    setTimeout(() => {
-        wrapper.classList.remove('error-shake');
-    }, 400);
+    setTimeout(() => { wrapper.classList.remove('error-shake'); }, 400);
 }
 
-// ===============================
-// 4. INTERFACE E GRÁFICOS
-// ===============================
-
-function toggleInstructorCard() {
-    const card = document.getElementById('instructorCard');
-    if (card) card.classList.toggle('active');
-}
-
-function exportData() {
-    const btn = document.querySelector('.btn-export');
-    if (!btn) return;
-    const originalHTML = btn.innerHTML;
-    btn.innerHTML = 'Exportando...';
-    btn.style.color = '#E30613';
-    setTimeout(() => {
-        alert("Dados exportados (CSV) com sucesso!");
-        btn.innerHTML = originalHTML;
-        btn.style.color = '';
-    }, 1000);
-}
-
-// Modal de Detalhes (Vem do clique no gráfico)
-function openDetailModal(monthIndex, monthName) {
-    const modal = document.getElementById('detailModal');
-    const title = document.getElementById('modalMonthTitle');
-    const tbody = document.getElementById('modalTableBody');
-
-    if (!modal) return;
-
-    const realMonth = monthIndex + 1;
-    const currentYear = new Date().getFullYear();
-
-    title.innerText = `${monthName} de ${currentYear}`;
-    modal.classList.add('open');
-
-    fetch(`../apis/api.php?action=modal_details&month=${realMonth}&year=${currentYear}`)
-        .then(res => res.json())
-        .then(data => {
-            tbody.innerHTML = '';
-            if (!data || data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 20px;">Nenhum registro encontrado.</td></tr>';
-                return;
-            }
-            data.forEach(row => {
-                const statusTexto = row.status_formatado || row.status;
-                let classeStatus = statusTexto === 'Pendente' ? 'status-pendente' : 'status-resolvido';
-                tbody.innerHTML += `
-                    <tr>
-                        <td>${row.data}</td>
-                        <td style="font-weight:500;">${row.aluno}</td>
-                        <td>${row.epis}</td>
-                        <td>${row.hora}</td>
-                        <td><span class="status-badge ${classeStatus}">${statusTexto}</span></td>
-                    </tr>`;
-            });
-        })
-        .catch(() => {
-            tbody.innerHTML = '<tr><td colspan="5" style="color:red; text-align:center">Erro na conexão.</td></tr>';
-        });
-}
-
-function loadCharts() {
-    fetch('../apis/api.php?action=charts')
-        .then(res => res.json())
-        .then(response => {
-            // BAR CHART
-            const ctxMain = document.getElementById('mainChart').getContext('2d');
-            new Chart(ctxMain, {
-                type: 'bar',
-                data: {
-                    labels: monthsFull,
-                    datasets: [
-                        { label: 'Capacete', data: response.bar.capacete, backgroundColor: '#E30613', borderRadius: 4 },
-                        { label: 'Óculos', data: response.bar.oculos, backgroundColor: '#1F2937', borderRadius: 4 },
-                        { label: 'Total', data: response.bar.total, backgroundColor: '#9CA3AF', borderRadius: 4 }
-                    ]
-                },
-                options: {
-                    responsive: true, maintainAspectRatio: false,
-                    onClick: (evt, active, chart) => {
-                        if (active.length > 0) {
-                            // CHAMA A FUNÇÃO openDetailModal (Lógica sua)
-                            openDetailModal(active[0].index, chart.data.labels[active[0].index]);
-                        }
-                    }
-                }
-            });
-
-            // DOUGHNUT CHART
-            const ctxDoughnut = document.getElementById('doughnutChart').getContext('2d');
-            new Chart(ctxDoughnut, {
-                type: 'doughnut',
-                data: {
-                    labels: response.doughnut.labels,
-                    datasets: [{
-                        data: response.doughnut.data,
-                        backgroundColor: ['#E30613', '#1F2937', '#9CA3AF'],
-                        borderWidth: 2
-                    }]
-                },
-                options: { responsive: true, maintainAspectRatio: false, cutout: '75%' }
-            });
-        })
-        .catch(err => console.error('Erro gráficos:', err));
-}
-
-
-// =============================================================
-// LÓGICA DOS DROPDOWNS (MÊS E ANO)
-// Cole isso no final do dashboard.js ou dentro da seção de Helpers
-// =============================================================
-
-// 1. Alternar visualização da lista de MESES
 function toggleMonthList() {
     const drop = document.getElementById('monthDropdown');
     const yearDrop = document.getElementById('yearDropdown');
-
-    // Fecha o de ano se estiver aberto
     if (yearDrop) yearDrop.classList.remove('active');
 
     if (!drop.classList.contains('active')) {
-        // Preenche a lista antes de mostrar
         let html = '';
         monthsFull.forEach((m, index) => {
             const isSelected = index === currCalMonth ? 'selected' : '';
@@ -451,18 +331,14 @@ function toggleMonthList() {
     }
 }
 
-// 2. Alternar visualização da lista de ANOS
 function toggleYearList() {
     const drop = document.getElementById('yearDropdown');
     const monthDrop = document.getElementById('monthDropdown');
-
-    // Fecha o de mês se estiver aberto
     if (monthDrop) monthDrop.classList.remove('active');
 
     if (!drop.classList.contains('active')) {
         let html = '';
         const currentYear = new Date().getFullYear();
-        // Gera 5 anos para trás e 5 para frente
         for (let i = currentYear - 5; i <= currentYear + 5; i++) {
             const isSelected = i === currCalYear ? 'selected' : '';
             html += `<div class="dropdown-item ${isSelected}" onclick="selectYear(${i})">${i}</div>`;
@@ -474,32 +350,25 @@ function toggleYearList() {
     }
 }
 
-// 3. Ação ao clicar em um Mês
 function selectMonth(index) {
     currCalMonth = index;
-    renderCalendarGrid(); // Atualiza o grid
-    document.getElementById('monthDropdown').classList.remove('active'); // Fecha menu
+    renderCalendarGrid();
+    document.getElementById('monthDropdown').classList.remove('active');
 }
 
-// 4. Ação ao clicar em um Ano
 function selectYear(year) {
     currCalYear = year;
-    renderCalendarGrid(); // Atualiza o grid
-    document.getElementById('yearDropdown').classList.remove('active'); // Fecha menu
+    renderCalendarGrid();
+    document.getElementById('yearDropdown').classList.remove('active');
 }
 
-// 5. Fechar dropdowns se clicar fora (UX Importante)
 window.addEventListener('click', function (e) {
     const monthContainer = document.getElementById('monthSelector');
     const yearContainer = document.getElementById('yearSelector');
-
-    // Se o clique NÃO foi dentro do container do mês, fecha o dropdown do mês
     if (monthContainer && !monthContainer.contains(e.target)) {
         const drop = document.getElementById('monthDropdown');
         if (drop) drop.classList.remove('active');
     }
-
-    // Se o clique NÃO foi dentro do container do ano, fecha o dropdown do ano
     if (yearContainer && !yearContainer.contains(e.target)) {
         const drop = document.getElementById('yearDropdown');
         if (drop) drop.classList.remove('active');
@@ -509,7 +378,7 @@ window.addEventListener('click', function (e) {
 function highlightDaily(periodo) {
     window.location.href = 'infracoes.php?filtro=' + periodo;
 }
-// Função extra para atualizar as porcentagens dinamicamente
+
 function refreshBadgesJS(currentVal, previousVal, elementId) {
     const badge = document.getElementById(elementId);
     if (!badge) return;
@@ -521,48 +390,12 @@ function refreshBadgesJS(currentVal, previousVal, elementId) {
         percent = currentVal * 100;
     }
 
-    // Define a classe de cor e a seta
     const isUp = percent >= 0;
     badge.className = `badge ${isUp ? 'up' : 'down'}`;
     badge.innerHTML = `${isUp ? '↗' : '↘'} ${Math.abs(percent)}%`;
 }
 
-// --- MONITOR DE MUDANÇAS (FUNÇÃO EXTRA) ---
-// --- MONITOR DE MUDANÇAS (FUNÇÃO EXTRA) ---
-const observer = new MutationObserver(() => {
-    // 1. Pega os valores atuais (KPIs)
-    const totalHoje = parseInt(document.getElementById('kpiDia')?.innerText) || 0;
-    const totalSemana = parseInt(document.getElementById('kpiSemana')?.innerText) || 0;
-    const totalMes = parseInt(document.getElementById('kpiMes')?.innerText) || 0;
-
-    // 2. Cálculo dos Períodos Anteriores para comparação
-    const datePrevDay = new Date(selectedDate);
-    datePrevDay.setDate(datePrevDay.getDate() - 1);
-
-    // Ontem
-    const totalOntem = allOccurrences.filter(item => {
-        const itemDate = new Date((item.full_date || item.data_hora || item.date).replace(/-/g, '/'));
-        return isSameDay(datePrevDay, itemDate);
-    }).length;
-
-    // 3. Atualiza as Badges chamando a sua função refreshBadgesJS
-    refreshBadgesJS(totalHoje, totalOntem, 'badgeDia');
-
-    // Nota: Como a lógica de "semana anterior" exige um cálculo de calendário mais complexo,
-    // por enquanto o observer vai resetar as outras badges ou mantê-las consistentes.
-});
-
-// Configura o observador para vigiar o texto dos KPIs
-// Usamos characterData e childList para garantir que qualquer mudança de texto dispare
-const config = { childList: true, characterData: true, subtree: true };
-
-if (document.getElementById('kpiDia')) observer.observe(document.getElementById('kpiDia'), config);
-if (document.getElementById('kpiSemana')) observer.observe(document.getElementById('kpiSemana'), config);
-if (document.getElementById('kpiMes')) observer.observe(document.getElementById('kpiMes'), config);
-
-
 function updatePercentagesDinamicamente() {
-    // 1. Definir datas de comparação
     const datePrevDay = new Date(selectedDate);
     datePrevDay.setDate(datePrevDay.getDate() - 1);
 
@@ -571,64 +404,28 @@ function updatePercentagesDinamicamente() {
     const datePrevWeek = new Date(startOfSelectedWeek);
     datePrevWeek.setDate(datePrevWeek.getDate() - 7);
 
-    // 2. Contar ocorrências nos períodos anteriores
     let totalOntem = 0;
     let totalSemanaPassada = 0;
 
     allOccurrences.forEach(item => {
         const itemDate = new Date((item.full_date || item.data_hora || item.date).replace(/-/g, '/'));
-
         if (isSameDay(datePrevDay, itemDate)) totalOntem++;
         if (isSameWeek(datePrevWeek, itemDate)) totalSemanaPassada++;
     });
 
-    // 3. Pegar os valores atuais que já estão na tela
-    const totalHoje = parseInt(document.getElementById('kpiDia').innerText) || 0;
-    const totalSemana = parseInt(document.getElementById('kpiSemana').innerText) || 0;
+    const totalHoje = parseInt(document.getElementById('kpiDia')?.innerText) || 0;
+    const totalSemana = parseInt(document.getElementById('kpiSemana')?.innerText) || 0;
 
-    // 4. Chamar a função de badges (aquela que você já tem no arquivo)
     refreshBadgesJS(totalHoje, totalOntem, 'badgeDia');
     refreshBadgesJS(totalSemana, totalSemanaPassada, 'badgeSemana');
 }
 
-function closeModal() {
-    const modal = document.getElementById('detailModal');
-    if (modal) {
-        modal.classList.remove('active'); // Remove a classe que mostra o modal
-        // Caso o seu CSS use display: block/none em vez de classes:
-        modal.style.display = 'none';
-    }
-}
-
-function openAlunosModal() {
-    const modal = document.getElementById('alunosRankingModal');
-    if (modal) {
-        modal.style.display = 'flex'; // Força a exibição
-        modal.style.opacity = '1';    // Garante visibilidade
-        modal.style.visibility = 'visible';
-    }
-}
-
-function closeAlunosModal() {
-    const modal = document.getElementById('alunosRankingModal');
-    if (modal) {
-        modal.style.display = 'none';
-    }
-}
-
-// parte das notifcaçoes:
-// =========================================================
-// SISTEMA DE NOTIFICAÇÕES EM TEMPO REAL
-// =========================================================
-
-// 1. Variável para o sistema "lembrar" qual foi o último ID que ele já mostrou na tela
 // =========================================================
 // SISTEMA DE NOTIFICAÇÕES EM TEMPO REAL
 // =========================================================
 
 let ultimoIdNotificacao = 0;
 
-// 1. Função Visual: Cria o card com as classes do seu CSS
 function mostrarNotificacao(aluno, epi) {
     const container = document.getElementById('notification-container');
     if (!container) return;
@@ -651,77 +448,329 @@ function mostrarNotificacao(aluno, epi) {
     `;
 
     container.appendChild(toast);
-
-    // Carrega o ícone do Lucide (se você estiver usando a biblioteca)
-    if (typeof lucide !== 'undefined') {
-        lucide.createIcons({ root: toast });
-    }
-
-    // Atualiza o tamanho para o efeito cascata
-    updateToastWidths();
-
-    // Remove automaticamente após 5 segundos
-    setTimeout(() => { removeToast(toast); }, 5000);
+    if (typeof lucide !== 'undefined') lucide.createIcons({ root: toast });
+    setTimeout(() => { 
+        toast.classList.add('removing');
+        setTimeout(() => toast.remove(), 350);
+    }, 5000);
 }
 
-// 2. Função Auxiliar: Faz o card sair suavemente e organiza os restantes
-function removeToast(toastElement) {
-    if (toastElement.classList.contains('removing')) return;
-    toastElement.classList.add('removing'); // Ativa a animação do seu CSS
-
-    setTimeout(() => {
-        if (toastElement.parentElement) {
-            toastElement.parentElement.removeChild(toastElement);
-            updateToastWidths();
-        }
-    }, 350); // 350ms é o tempo da animação (0.3s)
-}
-
-// 3. Função Auxiliar: Faz o efeito empilhado (cards de baixo ficam menores)
-function updateToastWidths() {
-    const container = document.getElementById('notification-container');
-    const toasts = Array.from(container.querySelectorAll('.toast:not(.removing)'));
-    if (toasts.length === 0) return;
-
-    const midIndex = (toasts.length - 1) / 2;
-
-    toasts.forEach((toast, index) => {
-        const distanceFromCenter = Math.abs(index - midIndex);
-        const percentage = 100 - (distanceFromCenter * 5); // Diminui 5% de largura
-        toast.style.width = `${Math.max(percentage, 75)}%`; // Nunca fica menor que 75%
-    });
-}
-
-// 4. O Motor (Fetch no PHP) - Mantivemos a sua lógica que já funcionava!
 function verificarNovasOcorrencias() {
     fetch(`../php/check_notificacoes.php?last_id=${ultimoIdNotificacao}`, {
         headers: { "X-Requested-With": "XMLHttpRequest" }
     })
         .then(res => res.json())
         .then(data => {
-            console.log("RETORNO COMPLETO:", data);
-
             if (data.status === 'init') {
                 ultimoIdNotificacao = data.last_id;
                 return;
             }
-
             if (data.status === 'success' && data.dados.length > 0) {
-
                 data.dados.forEach(ocorrencia => {
-
-                    mostrarNotificacao(
-                        ocorrencia.aluno,
-                        ocorrencia.epi_nome
-                    );
-
+                    mostrarNotificacao(ocorrencia.aluno, ocorrencia.epi_nome);
                     ultimoIdNotificacao = ocorrencia.id;
                 });
             }
-
         })
         .catch(err => console.error(err));
 }
-// <------------------------------------------>//
+
 setInterval(verificarNovasOcorrencias, 5000);
-verificarNovasOcorrencias(); 
+verificarNovasOcorrencias();
+
+/// =============================================================
+/// GERENCIADOR DE GRÁFICOS (Chart.js) - CORRIGIDO
+// =============================================================
+
+function loadChartData(chartType = 'bar') {
+    fetch('../apis/api.php?action=charts')
+        .then(res => res.json())
+        .then(response => {
+            createMainChart(response, chartType);
+            createDoughnutChart(response);
+        })
+        .catch(err => console.error('Erro ao carregar gráficos:', err));
+}
+
+function createMainChart(data, chartType = 'bar') {
+    const ctx = document.getElementById('mainChart')?.getContext('2d');
+    if (!ctx) return;
+
+    // Pega a cor salva no localStorage
+    const corDestaque = localStorage.getItem('chartColor') || '#E30613';
+
+    if (mainChartInstance) mainChartInstance.destroy();
+
+    mainChartInstance = new Chart(ctx, {
+        type: chartType,
+        data: {
+            labels: monthsFull,
+            datasets: [
+                { 
+                    label: 'Capacete', 
+                    data: data.bar?.capacete || [], 
+                    borderColor: corDestaque,
+                    backgroundColor: chartType === 'bar' ? corDestaque : 'transparent',
+                    borderWidth: chartType === 'line' ? 3 : 1,
+                    pointBackgroundColor: corDestaque,
+                    pointBorderColor: 'white',
+                    tension: 0.4,
+                    fill: false,
+                    borderRadius: 4
+                },
+                { 
+                    label: 'Óculos', 
+                    data: data.bar?.oculos || [], 
+                    borderColor: '#1F2937',
+                    backgroundColor: chartType === 'bar' ? '#1F2937' : 'transparent',
+                    borderWidth: chartType === 'line' ? 3 : 1,
+                    pointBackgroundColor: '#1F2937',
+                    pointBorderColor: 'white',
+                    tension: 0.4,
+                    fill: false,
+                    borderRadius: 4
+                },
+                { 
+                    label: 'Total', 
+                    data: data.bar?.total || [], 
+                    borderColor: '#9CA3AF',
+                    backgroundColor: chartType === 'bar' ? '#9CA3AF' : 'transparent',
+                    borderWidth: chartType === 'line' ? 3 : 1,
+                    pointBackgroundColor: '#9CA3AF',
+                    pointBorderColor: 'white',
+                    tension: 0.4,
+                    fill: false,
+                    borderRadius: 4
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: true, position: 'top', labels: { usePointStyle: chartType === 'line', pointStyle: 'circle' } },
+                tooltip: { mode: 'index', intersect: false }
+            }
+        }
+    });
+}
+
+function createDoughnutChart(data) {
+    const ctx = document.getElementById('doughnutChart')?.getContext('2d');
+    if (!ctx) return;
+
+    // Pega a cor salva no localStorage
+    const corDestaque = localStorage.getItem('chartColor') || '#E30613';
+
+    if (doughnutChartInstance) doughnutChartInstance.destroy();
+
+    doughnutChartInstance = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: data.doughnut?.labels || ['Capacete', 'Óculos', 'Outros'],
+            datasets: [{
+                data: data.doughnut?.data || [0, 0, 0],
+                backgroundColor: [corDestaque, '#1F2937', '#9CA3AF'],
+                borderWidth: 2,
+                borderColor: 'white'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '70%',
+            plugins: {
+                legend: { position: 'bottom', labels: { usePointStyle: true, pointStyle: 'circle' } }
+            }
+        }
+    });
+}
+
+// Função para atualizar a cor dos gráficos sem recarregar
+function updateChartsColor(newColor) {
+    // Atualiza gráfico principal
+    if (mainChartInstance) {
+        mainChartInstance.data.datasets[0].borderColor = newColor;
+        mainChartInstance.data.datasets[0].pointBackgroundColor = newColor;
+        
+        if (mainChartInstance.config.type === 'bar') {
+            mainChartInstance.data.datasets[0].backgroundColor = newColor;
+        }
+        
+        mainChartInstance.update();
+    }
+    
+    // Atualiza gráfico de rosca
+    if (doughnutChartInstance) {
+        doughnutChartInstance.data.datasets[0].backgroundColor[0] = newColor;
+        doughnutChartInstance.update();
+    }
+}
+
+// Monitora mudanças no localStorage
+window.addEventListener('storage', function(e) {
+    if (e.key === 'chartColor') {
+        updateChartsColor(e.newValue);
+    }
+});
+
+// Exporta as funções necessárias
+window.loadChartData = loadChartData;
+window.createMainChart = createMainChart;
+window.createDoughnutChart = createDoughnutChart;
+window.updateChartsColor = updateChartsColor;
+// =============================================================
+// DASHBOARD.JS - VERSÃO FINAL COM COR DINÂMICA TOTAL
+// =============================================================
+// =============================================================
+// INICIALIZAÇÃO
+// =============================================================
+document.addEventListener("DOMContentLoaded", function () {
+
+    loadCalendarData();
+
+    if (document.getElementById('mainChart')) {
+        const savedChartType = localStorage.getItem('preferredChartType') || 'bar';
+        loadChartData(savedChartType);
+    }
+
+    applySavedColor();
+});
+
+// =============================================================
+// APLICA COR SALVA GLOBALMENTE
+// =============================================================
+function applySavedColor() {
+    const savedColor = localStorage.getItem('chartColor') || '#E30613';
+    document.documentElement.style.setProperty('--primary', savedColor);
+}
+
+// =============================================================
+// CARREGAMENTO DOS GRÁFICOS
+// =============================================================
+function loadChartData(chartType = 'bar') {
+    fetch('./apis/api.php?action=charts')
+        .then(res => res.json())
+        .then(response => {
+            createMainChart(response, chartType);
+            createDoughnutChart(response);
+        })
+        .catch(err => console.error(err));
+}
+
+function getChartColor() {
+    return localStorage.getItem('chartColor') || '#E30613';
+}
+
+function createMainChart(data, chartType = 'bar') {
+
+    const ctx = document.getElementById('mainChart')?.getContext('2d');
+    if (!ctx) return;
+
+    const cor = getChartColor();
+
+    if (mainChartInstance) mainChartInstance.destroy();
+
+    mainChartInstance = new Chart(ctx, {
+        type: chartType,
+        data: {
+            labels: monthsFull,
+            datasets: [
+                {
+                    label: 'Capacete',
+                    data: data.bar?.capacete || [],
+                    borderColor: cor,
+                    backgroundColor: chartType === 'bar' ? cor : 'transparent',
+                    borderWidth: chartType === 'line' ? 3 : 1,
+                    pointBackgroundColor: cor,
+                    tension: 0.4,
+                    fill: false,
+                    borderRadius: 4
+                },
+                {
+                    label: 'Óculos',
+                    data: data.bar?.oculos || [],
+                    borderColor: '#1F2937',
+                    backgroundColor: chartType === 'bar' ? '#1F2937' : 'transparent',
+                    borderWidth: chartType === 'line' ? 3 : 1,
+                    tension: 0.4,
+                    fill: false,
+                    borderRadius: 4
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'top' },
+                tooltip: { mode: 'index', intersect: false }
+            }
+        }
+    });
+}
+
+function createDoughnutChart(data) {
+
+    const ctx = document.getElementById('doughnutChart')?.getContext('2d');
+    if (!ctx) return;
+
+    const cor = getChartColor();
+
+    if (doughnutChartInstance) doughnutChartInstance.destroy();
+
+    doughnutChartInstance = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: data.doughnut?.labels || ['Capacete','Óculos','Outros'],
+            datasets: [{
+                data: data.doughnut?.data || [0,0,0],
+                backgroundColor: [cor, '#1F2937', '#9CA3AF'],
+                borderWidth: 2,
+                borderColor: 'white'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '70%'
+        }
+    });
+}
+
+// =============================================================
+// ATUALIZAÇÃO DINÂMICA DE COR
+// =============================================================
+function updateChartsColor(newColor) {
+
+    document.documentElement.style.setProperty('--primary', newColor);
+
+    if (mainChartInstance) {
+        mainChartInstance.data.datasets[0].borderColor = newColor;
+        mainChartInstance.data.datasets[0].pointBackgroundColor = newColor;
+        mainChartInstance.data.datasets[0].backgroundColor =
+            mainChartInstance.config.type === 'bar' ? newColor : 'transparent';
+        mainChartInstance.update();
+    }
+
+    if (doughnutChartInstance) {
+        doughnutChartInstance.data.datasets[0].backgroundColor[0] = newColor;
+        doughnutChartInstance.update();
+    }
+}
+
+// Escuta alteração vinda da página de configurações
+window.addEventListener('storage', function(e) {
+    if (e.key === 'chartColor' && e.newValue) {
+        updateChartsColor(e.newValue);
+    }
+});
+
+// Caso esteja na mesma página
+document.addEventListener('input', function(e) {
+    if (e.target && e.target.id === 'chartColorPicker') {
+        const newColor = e.target.value;
+        localStorage.setItem('chartColor', newColor);
+        updateChartsColor(newColor);
+    }
+});
