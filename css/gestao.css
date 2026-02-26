@@ -1,0 +1,402 @@
+/* =========================================
+   1. VARIÁVEIS E RESET (Padrão Novo)
+   ========================================= */
+:root {
+    --primary: #E30613; /* Vermelho SENAI */
+    --primary-dark: #bf040f;
+    --primary-light: rgba(227, 6, 19, 0.1);
+    --secondary: #1F2937;
+    --text-main: #111827;
+    --text-muted: #64748B;
+
+    /* Fundo e Cards Novos */
+    --bg-body: #e6e8ec;
+    --bg-card: #ebebeb;
+    --bg-white: #ffffff;
+    --bg-hover: #f8fafc; /* Usado para hover de tabelas e botões no modo claro */
+
+    --success: #10B981;
+    --danger: #EF4444;
+    --warning: #e6ac48;
+
+    /* Bordas e Raios */
+    --border: #CBD5E1;
+    --radius: 16px;
+    --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    --senai-red:var(--primary);
+}
+
+/* =========================================
+   TEMA ESCURO (Dark Mode - Preto Profundo)
+   ========================================= */
+
+
+
+
+body {
+    background-color: var(--bg-body);
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+    color: var(--text-main);
+}
+
+/* =========================================
+   2. SIDEBAR (PADRÃO NOVO)
+   ========================================= */
+.sidebar {
+    width: 260px;
+    background: var(--bg-card);
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--border);
+    flex-shrink: 0;
+    box-shadow: 4px 0 15px -5px rgba(0, 0, 0, 0.05);
+    z-index: 10;
+}
+
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--text-main); /* Alterado para ficar dinâmico (Branco/Preto) */
+    margin-bottom: 40px;
+}
+
+.brand span {
+    color: var(--primary);
+}
+
+.admin-badge {
+    background: var(--primary-light);
+    color: var(--primary);
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-left: 8px;
+    font-weight: bold;
+}
+
+
+/* =========================================
+   3. MAIN CONTENT & HEADER
+   ========================================= */
+.main-content {
+    flex: 1;
+    padding: 32px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    /* Animação de entrada igual à dos outros arquivos */
+    opacity: 0;
+    animation: fadeInUpContent 0.8s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+    animation-delay: 0.1s;
+}
+
+@keyframes fadeInUpContent {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.header h1, .page-title h1 {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text-main); /* Adaptado para Modo Escuro */
+}
+
+.header p, .page-title p {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+
+/* =========================================
+   CARDS DE RESUMO (KPIs)
+   ========================================= */
+.summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.summary-card {
+    background: var(--bg-card);
+    padding: 1.5rem;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    box-shadow: var(--shadow);
+}
+
+.summary-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.icon-blue { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+.icon-green { background: rgba(16, 185, 129, 0.1); color: var(--success); }
+.icon-red { background: rgba(227, 6, 19, 0.1); color: var(--primary); }
+
+.summary-info h3 {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.summary-info p {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--text-main); /* Adaptado para Modo Escuro */
+    line-height: 1;
+}
+
+/* =========================================
+   TABELA DE USUÁRIOS
+   ========================================= */
+.data-panel {
+    background: var(--bg-card);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+}
+
+
+
+.btn-primary {
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 0.6rem 1.25rem;
+    border-radius: 8px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.9rem;
+}
+
+
+.table-responsive {
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+
+
+td {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.9rem;
+    vertical-align: middle;
+    color: var(--text-main);
+}
+
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--border); /* Ajuste de cor */
+    color: var(--text-main);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+
+
+.badge {
+    padding: 0.35rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    display: inline-block;
+}
+
+
+.actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.btn-icon {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: 0.2s;
+    padding: 6px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-icon:hover {
+    background: var(--bg-hover); /* Ajustado */
+    color: var(--primary);
+}
+
+/* =========================================
+   MODAL DE CADASTRO
+   ========================================= */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(4px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.modal-overlay.active {
+    display: flex;
+    opacity: 1;
+}
+
+.modal {
+    background: var(--bg-card);
+    width: 100%;
+    max-width: 450px;
+    border-radius: var(--radius);
+    padding: 2rem;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    transform: translateY(20px);
+    transition: transform 0.3s ease;
+}
+
+.modal-overlay.active .modal {
+    transform: translateY(0);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+:root {
+    --background: #ffffff;
+    --text: #000000;
+}
+
+[data-theme="dark"] {
+    --background: #121212;
+    --text: #ffffff;
+}
+
+body {
+    background-color: var(--background);
+    color: var(--text);
+}
+
+/* =========================================
+   DARK MODE DEFINITIVO
+   ========================================= */
+
+html[data-theme="dark"] {
+    --bg-body: #0F172A;
+    --bg-card: #1E293B;
+    --bg-white: #1E293B;
+    --text-main: #F1F5F9;
+    --text-muted: #94A3B8;
+    --border: #334155;
+    --bg-hover: #334155;
+}
+
+/* Fundo geral */
+html[data-theme="dark"] body {
+    background-color: var(--bg-body);
+    color: var(--text-main);
+}
+
+/* Sidebar */
+html[data-theme="dark"] .sidebar {
+    background: var(--bg-card);
+    border-right: 1px solid var(--border);
+}
+
+/* Cards */
+html[data-theme="dark"] .summary-card,
+html[data-theme="dark"] .data-panel,
+html[data-theme="dark"] .modal {
+    background: var(--bg-card);
+    border-color: var(--border);
+}
+
+/* Tabelas */
+html[data-theme="dark"] table {
+    background: var(--bg-card);
+    color: var(--text-main);
+}
+
+html[data-theme="dark"] td {
+    border-bottom: 1px solid var(--border);
+}
+
+/* Inputs */
+html[data-theme="dark"] input,
+html[data-theme="dark"] select,
+html[data-theme="dark"] textarea {
+    background: var(--bg-card);
+    color: var(--text-main);
+    border: 1px solid var(--border);
+}
+
+/* Botões */
+html[data-theme="dark"] .btn-icon:hover {
+    background: var(--bg-hover);
+}
+
+/* Modal overlay */
+html[data-theme="dark"] .modal-overlay {
+    background: rgba(0, 0, 0, 0.7);
+}
