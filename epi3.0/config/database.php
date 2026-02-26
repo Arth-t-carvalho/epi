@@ -5,10 +5,9 @@ $host = "localhost";
 $db   = "epi_guard";
 $user = "root";
 $pass = ""; // Coloque sua senha aqui se houver
-$port = "3308"; // Ajuste a porta se necessário (ex: 3308 no seu exemplo)
 
 try {
-    $dsn = "mysql:host=$host;port=$port;dbname=$db;charset=utf8mb4";
+    $dsn = "mysql:host=$host;dbname=$db;charset=utf8mb4";
     $options = [
         PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,

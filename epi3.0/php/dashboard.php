@@ -544,7 +544,7 @@ $rankingModal = $stmtRankingModal->fetchAll(PDO::FETCH_ASSOC);
             background: #f8fafc;
             padding: 8px;
             border-radius: 8px;
-            border: none
+            border: none;
                 /* Box Shadow: Horizontal, Vertical, Desfoque, Espalhamento, Cor */
                 box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
                 0 2px 4px -1px rgba(0, 0, 0, 0.06);
